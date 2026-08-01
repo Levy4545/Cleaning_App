@@ -27,7 +27,7 @@ Client books
 ```
 
 - **Customer:** `/book` 4-step wizard, `/appointments` (filter + cancel pending/approved + review), `/settings` profile/phone
-- **Admin:** `/admin`, `/admin/calendar` paint-style week slots, `/admin/appointments` master-detail inbox
+- **Admin:** `/admin`, `/admin/calendar` paint-style week slots, `/admin/appointments` master-detail inbox, `/admin/services` catalog CRUD
 - **Concurrency:** booking locks the slot (`FOR UPDATE`) and rejects races; cancel/reject can reopen the window
 - **Dev helpers:** `db:seed`, `db:promote-admin`, `db:wipe` (localhost-only unless `--allow-remote`)
 
@@ -82,7 +82,7 @@ npm run db:promote-admin -- you@example.com
 | `/` | Public | Landing |
 | `/login`, `/register` | Public | Auth (`redirectTo` honored after email login / OAuth) |
 | `/dashboard`, `/book`, `/appointments`, `/settings` | Signed-in | Customer flows |
-| `/admin`, `/admin/calendar`, `/admin/appointments` | Admin | Ops |
+| `/admin`, `/admin/calendar`, `/admin/appointments`, `/admin/services` | Admin | Ops + catalog |
 
 Middleware protects `/dashboard`, `/settings`, `/book`, `/appointments`, and `/admin/*`.
 

@@ -71,7 +71,7 @@ Cash payment tracking and cleaner assignment remain in the schema for later; the
 | [x] | Critical | Booking slot lock / race handling | `FOR UPDATE` + active status check |
 | [x] | High | Editable profile / phone | `/settings` |
 | [x] | Moderate | Week calendar UX | Paint tools + arrows |
-| [ ] | Moderate | Admin catalog CRUD UI | Seed covers catalog for now |
+| [x] | Moderate | Admin catalog CRUD UI | `/admin/services` categories + services |
 | [ ] | High | Cleaner-facing UI | Schema + guards only |
 | [ ] | High | Automated tests | Transitions / booking race |
 
@@ -120,7 +120,7 @@ Cash payment tracking and cleaner assignment remain in the schema for later; the
 
 | Done | Priority | Task | Notes |
 | --- | --- | --- | --- |
-| [ ] | Critical | Admin: manage categories & services UI | `/admin/services` |
+| [x] | Critical | Admin: manage categories & services UI | `/admin/services` |
 | [x] | Critical | Customer browse active services | `/book` step 1 |
 | [x] | Critical | Service fields: delivery modes, duration, base price, active | Seeded |
 | [x] | Moderate | Disable booking for inactive services | `isActive` checked |
@@ -278,7 +278,7 @@ Cash payment tracking and cleaner assignment remain in the schema for later; the
 
 1. ~~Schema + migrations + marketplace scaffold~~ ✅  
 2. ~~Guards + route shells~~ ✅  
-3. ~~Services + calendar UI~~ ✅ (admin catalog CRUD still open)  
+3. ~~Services + calendar UI~~ ✅  
 4. ~~Booking wizard + notify~~ ✅  
 5. ~~Admin approve / reject~~ ✅  
 6. ~~Complete + reviews~~ ✅  
