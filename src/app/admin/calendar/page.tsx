@@ -25,7 +25,7 @@ export default async function AdminCalendarPage() {
       return {
         id: row.appointmentId,
         slotId: row.slotId,
-        status: row.status as "PENDING" | "COMPLETED",
+        status: row.status,
         startsAt: row.startsAt.toISOString(),
         endsAt: row.endsAt.toISOString(),
         customerEmail: customer?.email ?? "Customer",
