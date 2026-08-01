@@ -1,28 +1,33 @@
 import type { Metadata } from "next";
-
-import { Header } from "@/components/layout/header";
-import { getCurrentUser } from "@/actions/auth";
+import { Inter, Playfair_Display } from "next/font/google";
 
 import "./globals.css";
 
+const inter = Inter({
+  subsets: ["latin"],
+  variable: "--font-inter",
+  display: "swap",
+});
+
+const playfair = Playfair_Display({
+  subsets: ["latin"],
+  variable: "--font-playfair",
+  display: "swap",
+});
+
 export const metadata: Metadata = {
-  title: "Cleaning App",
-  description: "Production-ready SaaS starter with Next.js and Supabase",
+  title: "Master-Gold Cleaning",
+  description: "Book premium car, carpet, couch, and chair cleaning in minutes.",
 };
 
-export default async function RootLayout({
+export default function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const user = await getCurrentUser();
-
   return (
-    <html lang="en">
-      <body className="min-h-screen antialiased">
-        <Header userEmail={user?.email} />
-        {children}
-      </body>
+    <html lang="en" className={`${inter.variable} ${playfair.variable}`}>
+      <body className="min-h-screen bg-ink font-sans text-bone antialiased">{children}</body>
     </html>
   );
 }

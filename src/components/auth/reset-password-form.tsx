@@ -3,12 +3,12 @@
 import { useState, useTransition } from "react";
 
 import { resetPassword } from "@/actions/auth";
+import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
-import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 
-export function ResetPasswordForm() {
+export function ResetPasswordForm({ defaultEmail = "" }: { defaultEmail?: string }) {
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -32,25 +32,26 @@ export function ResetPasswordForm() {
   };
 
   return (
-    <Card className="mx-auto w-full max-w-md">
-      <CardHeader>
-        <CardTitle>Reset password</CardTitle>
-        <CardDescription>We&apos;ll email you a secure reset link.</CardDescription>
-      </CardHeader>
-
-      <form action={handleSubmit} className="space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="email">Email</Label>
-          <Input id="email" name="email" type="email" autoComplete="email" required />
+    <form action={handleSubmit} className="space-y-4">
+      <div className="flex flex-wrap items-end gap-3">
+        <div className="min-w-56 flex-1 space-y-2">
+          <Label htmlFor="reset-email">Email</Label>
+          <Input
+            id="reset-email"
+            name="email"
+            type="email"
+            autoComplete="email"
+            defaultValue={defaultEmail}
+            required
+          />
         </div>
-
-        {error ? <p className="text-sm text-red-600">{error}</p> : null}
-        {message ? <p className="text-sm text-green-600">{message}</p> : null}
-
-        <Button type="submit" className="w-full" disabled={isPending}>
+        <Button type="submit" variant="secondary" disabled={isPending}>
           {isPending ? "Sending..." : "Send reset link"}
         </Button>
-      </form>
-    </Card>
+      </div>
+
+      {error ? <Alert>{error}</Alert> : null}
+      {message ? <Alert tone="success">{message}</Alert> : null}
+    </form>
   );
 }

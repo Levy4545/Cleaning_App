@@ -222,6 +222,8 @@ export const appointments = pgTable("appointments", {
   status: appointmentStatusEnum("status").notNull().default("PENDING"),
   deliveryMode: deliveryModeEnum("delivery_mode").notNull(),
   notes: text("notes"),
+  /** Admin/cleaner message to the client (e.g. rejection reason). */
+  statusNote: text("status_note"),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
 });

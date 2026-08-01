@@ -1,13 +1,17 @@
 import { Suspense } from "react";
 
+import { AuthLayout } from "@/components/auth/auth-layout";
 import { LoginForm } from "@/components/auth/login-form";
 
 export default function LoginPage() {
   return (
-    <main className="mx-auto flex min-h-[calc(100vh-4rem)] max-w-6xl items-center justify-center px-4 py-12">
-      <Suspense fallback={<div className="text-sm text-slate-500">Loading...</div>}>
+    <AuthLayout
+      quote="Elegance is not about being noticed, it's about being remembered."
+      attribution="Giorgio Armani"
+    >
+      <Suspense fallback={<p className="text-sm text-faint">Loading...</p>}>
         <LoginForm />
       </Suspense>
-    </main>
+    </AuthLayout>
   );
 }

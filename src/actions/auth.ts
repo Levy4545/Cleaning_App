@@ -1,6 +1,7 @@
 "use server";
 
 import { redirect } from "next/navigation";
+import { revalidatePath } from "next/cache";
 
 import { createClient } from "@/lib/supabase/server";
 import {
@@ -9,6 +10,7 @@ import {
   createUser,
   updateUser,
   updateUserByEmail,
+  updateUserRole,
 } from "@/db/queries/users";
 import { ensureProfile } from "@/db/queries/profiles";
 import { ensureShopMembership } from "@/db/queries/shop-members";
@@ -17,11 +19,15 @@ import {
   loginSchema,
   registerSchema,
   resetPasswordSchema,
+  updateProfileSchema,
   type LoginInput,
   type RegisterInput,
   type ResetPasswordInput,
 } from "@/validators/auth";
 import { getDefaultShopId } from "@/lib/tenancy/get-shop";
+import { homePathForRole } from "@/lib/auth/home-path";
+import { env } from "@/env";
+
 export async function signInWithEmail(
   input: LoginInput,
 ): Promise<ActionResult> {
@@ -40,7 +46,9 @@ export async function signInWithEmail(
     return { success: false, error: error.message };
   }
 
-  redirect("/dashboard");
+  await syncUserFromAuth();
+  const current = await getCurrentUser();
+  redirect(homePathForRole(current?.role ?? "USER"));
 }
 
 export async function signUpWithEmail(
@@ -70,7 +78,8 @@ export async function signUpWithEmail(
     await syncUserRecord(data.user.id, parsed.data.email, parsed.data.name);
   }
 
-  redirect("/dashboard");
+  const current = await getCurrentUser();
+  redirect(homePathForRole(current?.role ?? "USER"));
 }
 
 export async function signOut(): Promise<void> {
@@ -96,6 +105,39 @@ export async function resetPassword(
     return { success: false, error: error.message };
   }
 
+  return { success: true };
+}
+
+export async function updateProfile(input: {
+  name: string;
+  phone?: string;
+}): Promise<ActionResult> {
+  const parsed = updateProfileSchema.safeParse(input);
+  if (!parsed.success) {
+    return { success: false, error: parsed.error.errors[0]?.message ?? "Invalid input" };
+  }
+
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) {
+    return { success: false, error: "You must be signed in." };
+  }
+
+  // Keep auth metadata in step, otherwise syncUserFromAuth overwrites the name later.
+  const { error } = await supabase.auth.updateUser({ data: { name: parsed.data.name } });
+  if (error) {
+    return { success: false, error: error.message };
+  }
+
+  await updateUser(user.id, {
+    name: parsed.data.name,
+    phone: parsed.data.phone,
+  });
+
+  revalidatePath("/settings");
   return { success: true };
 }
 
@@ -140,6 +182,7 @@ async function syncUserRecord(userId: string, email: string, name: string) {
     });
     await ensureProfile(userId);
     await ensureDefaultCustomerMembership(userId);
+    await maybeBootstrapAdmin(userId, email);
     return;
   }
 
@@ -152,6 +195,7 @@ async function syncUserRecord(userId: string, email: string, name: string) {
     });
     await ensureProfile(userId);
     await ensureDefaultCustomerMembership(userId);
+    await maybeBootstrapAdmin(userId, email);
     return;
   }
 
@@ -163,6 +207,27 @@ async function syncUserRecord(userId: string, email: string, name: string) {
 
   await ensureProfile(userId);
   await ensureDefaultCustomerMembership(userId);
+  await maybeBootstrapAdmin(userId, email);
+}
+
+async function maybeBootstrapAdmin(userId: string, email: string) {
+  const bootstrap = env.ADMIN_BOOTSTRAP_EMAIL?.toLowerCase();
+  if (!bootstrap || email.toLowerCase() !== bootstrap) {
+    return;
+  }
+
+  await updateUserRole(userId, "ADMIN");
+
+  try {
+    const shopId = await getDefaultShopId();
+    await ensureShopMembership({
+      shopId,
+      userId,
+      role: "OWNER",
+    });
+  } catch {
+    // ignore if shop not seeded
+  }
 }
 
 async function ensureDefaultCustomerMembership(userId: string) {

@@ -1,37 +1,40 @@
 import Link from "next/link";
 
-import { signOut } from "@/actions/auth";
-import { Button } from "@/components/ui/button";
+import { Logo } from "@/components/layout/logo";
+import { ButtonLink } from "@/components/ui/button";
 
-type HeaderProps = {
-  userEmail?: string;
-};
+const links = [
+  { href: "#services", label: "Services" },
+  { href: "#how-it-works", label: "How it works" },
+  { href: "#pricing", label: "Pricing" },
+];
 
-export function Header({ userEmail }: HeaderProps) {
+/** Marketing navbar. Signed-in visitors never reach `/`, so there is no user state here. */
+export function SiteHeader() {
   return (
-    <header className="border-b border-slate-200 bg-white">
-      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between px-4 sm:px-6">
-        <Link href="/dashboard" className="text-lg font-semibold text-slate-900">
-          Cleaning App
-        </Link>
+    <header className="sticky top-0 z-40 border-b border-line/60 bg-ink/80 backdrop-blur">
+      <div className="mx-auto flex h-16 max-w-6xl items-center justify-between gap-6 px-4 sm:px-6">
+        <Logo href="/" />
 
-        <div className="flex items-center gap-4">
-          {userEmail ? (
-            <>
-              <span className="hidden text-sm text-slate-600 sm:inline">{userEmail}</span>
-              <form action={signOut}>
-                <Button type="submit" variant="ghost" size="sm">
-                  Sign out
-                </Button>
-              </form>
-            </>
-          ) : (
-            <Link href="/login">
-              <Button variant="outline" size="sm">
-                Sign in
-              </Button>
+        <nav className="hidden items-center gap-8 md:flex">
+          {links.map((link) => (
+            <Link
+              key={link.href}
+              href={link.href}
+              className="text-sm text-ash transition-colors hover:text-bone"
+            >
+              {link.label}
             </Link>
-          )}
+          ))}
+        </nav>
+
+        <div className="flex items-center gap-2">
+          <ButtonLink href="/login" variant="ghost" size="sm">
+            Sign in
+          </ButtonLink>
+          <ButtonLink href="/register" size="sm">
+            Book now
+          </ButtonLink>
         </div>
       </div>
     </header>

@@ -14,6 +14,11 @@ export const env = createEnv({
     TWILIO_FROM_NUMBER: z.string().min(1).optional(),
     /** Preferred notify channel for MVP system events */
     NOTIFY_CHANNEL: z.enum(["EMAIL", "SMS"]).default("EMAIL"),
+    /**
+     * If set, this email is promoted to ADMIN on sync (local bootstrap).
+     * Leave unset in production once a real admin exists.
+     */
+    ADMIN_BOOTSTRAP_EMAIL: z.string().email().optional(),
   },
   client: {
     NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
@@ -28,6 +33,7 @@ export const env = createEnv({
     TWILIO_AUTH_TOKEN: process.env.TWILIO_AUTH_TOKEN,
     TWILIO_FROM_NUMBER: process.env.TWILIO_FROM_NUMBER,
     NOTIFY_CHANNEL: process.env.NOTIFY_CHANNEL,
+    ADMIN_BOOTSTRAP_EMAIL: process.env.ADMIN_BOOTSTRAP_EMAIL,
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   },

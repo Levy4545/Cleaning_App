@@ -41,7 +41,11 @@ export async function updateSession(request: NextRequest) {
     pathname.startsWith("/register") ||
     pathname.startsWith("/auth");
   const isProtectedRoute =
-    pathname.startsWith("/dashboard") || pathname.startsWith("/settings");
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/settings") ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/book") ||
+    pathname.startsWith("/appointments");
 
   if (!user && isProtectedRoute) {
     const url = request.nextUrl.clone();
@@ -60,10 +64,6 @@ export async function updateSession(request: NextRequest) {
     const url = request.nextUrl.clone();
     url.pathname = "/dashboard";
     return NextResponse.redirect(url);
-  }
-
-  if (!user && pathname === "/" && !isAuthRoute) {
-    // Landing page remains public for unauthenticated visitors.
   }
 
   return supabaseResponse;

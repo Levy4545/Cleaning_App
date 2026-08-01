@@ -49,10 +49,26 @@ Cash payment tracking and cleaner assignment remain in the schema for later; the
 | [x] | Critical | Marketplace scaffold (silent) | `shops`, `shop_members`, `shopId` on business tables, `getDefaultShop()` |
 | [x] | Critical | Notification facade (email/SMS stub + Resend/Twilio) | Console stub when unset |
 | [x] | Critical | Reviews table + query helpers | For post-complete reviews |
-| [~] | Critical | Auth guards wired into admin/cleaner pages | Guards exist; routes next |
+| [x] | Critical | Auth guards wired into admin pages | `/admin` uses `requireAdmin` |
 | [ ] | High | Apply RLS policies in DB | Extend `supabase/rls.sql` |
 | [ ] | Moderate | Align `eslint-config-next` with Next major | Hygiene |
 | [ ] | Low | Remove unused deps (e.g. accidental packages) | Code hygiene |
+
+---
+
+## MVP UI progress (current)
+
+| Done | Priority | Task | Notes |
+| --- | --- | --- | --- |
+| [x] | Critical | Promote admin (`ADMIN_BOOTSTRAP_EMAIL` or `npm run db:promote-admin`) | |
+| [x] | Critical | `/admin` shell + overview | |
+| [x] | Critical | `/admin/calendar` create/list slots | |
+| [x] | Critical | `/admin/appointments` approve / reject / complete | + notify stubs |
+| [x] | Critical | `/book` booking form | PENDING + notify admins |
+| [x] | Critical | `/appointments` list + review after COMPLETED | |
+| [x] | Critical | Middleware protects `/admin`, `/book`, `/appointments` | |
+| [ ] | High | Editable profile / phone for SMS | Optional for SMS channel |
+| [ ] | Moderate | Richer calendar UX | |
 
 ---
 

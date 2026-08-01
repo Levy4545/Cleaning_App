@@ -53,7 +53,7 @@ async function sendEmail(input: NotifyInput): Promise<NotifyResult> {
       body: JSON.stringify({
         from,
         to: input.to,
-        subject: input.subject ?? "Cleaning App",
+        subject: input.subject ?? "Master-Gold Cleaning",
         text: input.body,
       }),
     });

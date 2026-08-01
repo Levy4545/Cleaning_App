@@ -14,6 +14,8 @@
     "db:migrate": "drizzle-kit migrate",
     "db:studio": "drizzle-kit studio",
     "db:seed": "tsx --env-file=.env.local scripts/seed.ts",
+    "db:promote-admin": "tsx --env-file=.env.local scripts/promote-admin.ts",
+    "db:wipe": "tsx --env-file=.env.local scripts/wipe.ts",
     "docker:up": "docker compose up -d",
     "docker:down": "docker compose down",
     "docker:full": "docker compose -f docker-compose.full.yml up --build"
@@ -25,6 +27,7 @@
     "clsx": "^2.1.1",
     "dotenv": "^17.4.2",
     "drizzle-orm": "^0.45.2",
+    "lucide-react": "^1.28.0",
     "next": "^16.2.11",
     "notenv": "^2.0.3",
     "postgres": "^3.4.7",
