@@ -5,13 +5,15 @@ import { LogoMark } from "@/components/layout/logo";
 import { ButtonLink } from "@/components/ui/button";
 import { getDefaultShopId } from "@/lib/tenancy/get-shop";
 import { listActiveServices } from "@/db/queries/services";
+import { formatPriceRange } from "@/lib/format";
 import { ServiceIcon } from "@/lib/service-icon";
 
 type ServiceCard = {
   id: string;
   name: string;
   description: string | null;
-  basePrice: string;
+  priceMin: string;
+  priceMax: string;
   durationMinutes: number;
 };
 
@@ -20,28 +22,32 @@ const fallbackServices: ServiceCard[] = [
     id: "car",
     name: "Car Interior Cleaning",
     description: "Seats, carpets and trim restored.",
-    basePrice: "80.00",
+    priceMin: "300.00",
+    priceMax: "500.00",
     durationMinutes: 90,
   },
   {
     id: "carpet",
     name: "Carpet Cleaning",
     description: "Deep extraction that lifts stains.",
-    basePrice: "60.00",
+    priceMin: "200.00",
+    priceMax: "400.00",
     durationMinutes: 60,
   },
   {
     id: "couch",
     name: "Couch Cleaning",
     description: "Upholstery refreshed and deodorised.",
-    basePrice: "70.00",
+    priceMin: "250.00",
+    priceMax: "450.00",
     durationMinutes: 75,
   },
   {
     id: "chair",
     name: "Chair Cleaning",
     description: "Quick revival for tired seating.",
-    basePrice: "25.00",
+    priceMin: "80.00",
+    priceMax: "150.00",
     durationMinutes: 30,
   },
 ];
@@ -78,7 +84,8 @@ async function loadServices(): Promise<ServiceCard[]> {
       id: service.id,
       name: service.name,
       description: service.description,
-      basePrice: service.basePrice,
+      priceMin: service.priceMin,
+      priceMax: service.priceMax,
       durationMinutes: service.durationMinutes,
     }));
   } catch {
@@ -162,7 +169,7 @@ export default async function HomePage() {
                     {service.durationMinutes} min
                   </span>
                   <span className="font-display text-lg text-gold">
-                    From ${service.basePrice}
+                    {formatPriceRange(service.priceMin, service.priceMax)}
                   </span>
                 </div>
               </article>
@@ -201,8 +208,8 @@ export default async function HomePage() {
         <section id="pricing" className="mx-auto max-w-3xl scroll-mt-20 px-4 py-16 sm:px-6">
           <SectionHeading
             eyebrow="Pricing"
-            title="Transparent, per item"
-            body="Cash on completion. The price you see is the price you pay."
+            title="Transparent ranges"
+            body="Cash on completion. Each service is quoted as a range based on condition and size."
           />
 
           <div className="mt-10 overflow-hidden rounded-xl border border-line bg-panel">
@@ -217,7 +224,9 @@ export default async function HomePage() {
                   <p className="truncate text-sm font-medium text-bone">{service.name}</p>
                   <p className="text-xs text-faint">{service.durationMinutes} minutes</p>
                 </div>
-                <p className="font-display text-lg text-gold">${service.basePrice}</p>
+                <p className="font-display text-lg text-gold">
+                  {formatPriceRange(service.priceMin, service.priceMax)}
+                </p>
               </div>
             ))}
           </div>

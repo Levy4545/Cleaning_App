@@ -34,9 +34,11 @@ export default async function BookPage({
           id: s.id,
           name: s.name,
           description: s.description,
-          basePrice: s.basePrice,
+          priceMin: s.priceMin,
+          priceMax: s.priceMax,
           durationMinutes: s.durationMinutes,
           deliveryModes: s.deliveryModes,
+          itemTypeOptions: s.itemTypeOptions ?? [],
         }))}
         slots={slots.map((s) => ({
           id: s.id,

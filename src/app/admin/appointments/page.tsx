@@ -3,7 +3,7 @@ import { AppointmentsInbox, type InboxRow } from "@/components/admin/appointment
 import { requireAdmin } from "@/lib/auth/guards";
 import { getDefaultShopId } from "@/lib/tenancy/get-shop";
 import { listShopAppointmentsInbox } from "@/db/queries/appointments";
-import { formatItemType, formatSlotRange } from "@/lib/format";
+import { formatItemType, formatPriceRange, formatSlotRange } from "@/lib/format";
 
 /**
  * Renders the administrator appointments inbox with appointment totals and pending count.
@@ -37,10 +37,17 @@ export default async function AdminAppointmentsPage() {
     items:
       appointment.items.length > 0
         ? appointment.items
-            .map((item) => `${formatItemType(item.itemType)} × ${item.quantity}`)
+            .map((item) => {
+              const qty = `× ${item.quantity}`;
+              return item.itemType ? `${formatItemType(item.itemType)} ${qty}` : `Item ${qty}`;
+            })
             .join(", ")
         : "Not specified",
-    amount: appointment.paymentAmount ?? appointment.servicePrice ?? "0",
+    priceLabel: formatPriceRange(
+      appointment.servicePriceMin ?? "0",
+      appointment.servicePriceMax ?? appointment.servicePriceMin ?? "0",
+    ),
+    amount: appointment.paymentAmount ?? appointment.servicePriceMin ?? "0",
     paymentStatus: appointment.paymentStatus ?? "UNPAID",
     review:
       appointment.reviewRating != null

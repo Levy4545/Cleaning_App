@@ -135,8 +135,10 @@ export async function createService(data: {
   name: string;
   description?: string;
   deliveryModes: string[];
+  itemTypeOptions: string[];
   durationMinutes: number;
-  basePrice: string;
+  priceMin: string;
+  priceMax: string;
   isActive?: boolean;
 }) {
   const [row] = await db.insert(services).values(data).returning();
@@ -150,8 +152,10 @@ export async function updateService(data: {
   name: string;
   description?: string | null;
   deliveryModes: string[];
+  itemTypeOptions: string[];
   durationMinutes: number;
-  basePrice: string;
+  priceMin: string;
+  priceMax: string;
   isActive: boolean;
 }) {
   const [row] = await db
@@ -161,8 +165,10 @@ export async function updateService(data: {
       name: data.name,
       description: data.description ?? null,
       deliveryModes: data.deliveryModes,
+      itemTypeOptions: data.itemTypeOptions,
       durationMinutes: data.durationMinutes,
-      basePrice: data.basePrice,
+      priceMin: data.priceMin,
+      priceMax: data.priceMax,
       isActive: data.isActive,
     })
     .where(and(eq(services.id, data.serviceId), eq(services.shopId, data.shopId)))

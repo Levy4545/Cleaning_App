@@ -38,14 +38,6 @@ export const memberStatusEnum = pgEnum("member_status", [
 
 export const deliveryModeEnum = pgEnum("delivery_mode", ["ON_SITE", "DROP_OFF"]);
 
-export const itemTypeEnum = pgEnum("item_type", [
-  "CAR",
-  "CARPET",
-  "CHAIR",
-  "COUCH",
-  "OTHER",
-]);
-
 export const appointmentStatusEnum = pgEnum("appointment_status", [
   "PENDING",
   "APPROVED",
@@ -183,8 +175,15 @@ export const services = pgTable("services", {
   description: text("description"),
   /** Supported modes for this service, e.g. ["ON_SITE","DROP_OFF"]. */
   deliveryModes: text("delivery_modes").array().notNull().default(["DROP_OFF"]),
+  /**
+   * Selectable item-type options for booking (e.g. ["leather","fabric"]).
+   * Empty means the booking wizard hides the item-type field.
+   */
+  itemTypeOptions: text("item_type_options").array().notNull().default([]),
   durationMinutes: integer("duration_minutes").notNull().default(60),
-  basePrice: numeric("base_price", { precision: 10, scale: 2 }).notNull().default("0"),
+  /** Inclusive price range — quotes are not fixed single amounts. */
+  priceMin: numeric("price_min", { precision: 10, scale: 2 }).notNull().default("0"),
+  priceMax: numeric("price_max", { precision: 10, scale: 2 }).notNull().default("0"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
@@ -233,7 +232,8 @@ export const appointmentItems = pgTable("appointment_items", {
   appointmentId: uuid("appointment_id")
     .notNull()
     .references(() => appointments.id, { onDelete: "cascade" }),
-  itemType: itemTypeEnum("item_type").notNull(),
+  /** Selected option from the service's itemTypeOptions, or null when none apply. */
+  itemType: text("item_type"),
   quantity: integer("quantity").notNull().default(1),
   details: jsonb("details").$type<Record<string, unknown>>().notNull().default({}),
 });
@@ -335,7 +335,6 @@ export type Review = typeof reviews.$inferSelect;
 export type UserRole = (typeof userRoleEnum.enumValues)[number];
 export type AppointmentStatus = (typeof appointmentStatusEnum.enumValues)[number];
 export type DeliveryMode = (typeof deliveryModeEnum.enumValues)[number];
-export type ItemType = (typeof itemTypeEnum.enumValues)[number];
 export type PaymentStatus = (typeof paymentStatusEnum.enumValues)[number];
 export type SlotStatus = (typeof slotStatusEnum.enumValues)[number];
 export type NotificationChannel = (typeof notificationChannelEnum.enumValues)[number];

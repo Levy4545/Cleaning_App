@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { ArrowRight, CalendarPlus, CheckCircle2, Clock, Wallet } from "lucide-react";
+import { ArrowRight, CalendarPlus, CheckCircle2, Clock } from "lucide-react";
 
 import { AppShell } from "@/components/layout/app-shell";
 import { ButtonLink } from "@/components/ui/button";
@@ -13,12 +13,13 @@ import { getDefaultShopId } from "@/lib/tenancy/get-shop";
 import { findSlotById, listAppointmentsForCustomer } from "@/db/queries/appointments";
 import { findServiceById, listActiveServices } from "@/db/queries/services";
 import { ServiceIcon } from "@/lib/service-icon";
-import { formatMoney, formatSlotRange } from "@/lib/format";
+import { formatSlotRange } from "@/lib/format";
 
 const OPEN_STATUSES = ["PENDING", "APPROVED", "ASSIGNED", "IN_PROGRESS"];
 
 /**
- * Renders the authenticated customer's dashboard with appointment summaries, spending, upcoming bookings, available services, and recent activity.
+ * Renders the authenticated customer's dashboard with appointment summaries,
+ * upcoming bookings, available services, and recent activity.
  *
  * @returns The customer dashboard view.
  */
@@ -44,7 +45,6 @@ export default async function DashboardPage() {
 
   const open = rows.filter((row) => OPEN_STATUSES.includes(row.appointment.status));
   const completed = rows.filter((row) => row.appointment.status === "COMPLETED");
-  const totalSpent = completed.reduce((sum, row) => sum + Number(row.service?.basePrice ?? 0), 0);
 
   const next = [...open].sort((a, b) => {
     const aTime = a.slot ? new Date(a.slot.startsAt).getTime() : Infinity;
@@ -68,20 +68,13 @@ export default async function DashboardPage() {
       }
     >
       <div className="space-y-6">
-        <div className="grid gap-4 sm:grid-cols-3">
+        <div className="grid gap-4 sm:grid-cols-2">
           <StatCard label="Upcoming" value={open.length} icon={Clock} tone="amber" />
           <StatCard
             label="Completed"
             value={completed.length}
             icon={CheckCircle2}
             tone="emerald"
-          />
-          <StatCard
-            label="Total spent"
-            value={formatMoney(totalSpent)}
-            icon={Wallet}
-            tone="gold"
-            hint="Cash paid on completion"
           />
         </div>
 
