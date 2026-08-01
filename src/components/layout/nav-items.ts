@@ -4,6 +4,7 @@ import {
   LayoutDashboard,
   LogOut,
   Settings,
+  Sparkles,
   SquareArrowOutUpRight,
   type LucideIcon,
 } from "lucide-react";
@@ -27,6 +28,7 @@ export const adminNav: NavItem[] = [
   { href: "/admin", label: "Overview", short: "Overview", icon: LayoutDashboard },
   { href: "/admin/calendar", label: "Calendar", short: "Calendar", icon: CalendarDays },
   { href: "/admin/appointments", label: "Appointments", short: "Inbox", icon: ClipboardList },
+  { href: "/admin/services", label: "Services", short: "Catalog", icon: Sparkles },
 ];
 
 export const customerViewItem: NavItem = {
