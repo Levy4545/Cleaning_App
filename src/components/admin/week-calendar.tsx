@@ -27,7 +27,7 @@ export type CalendarSlot = {
 export type CalendarBooking = {
   id: string;
   slotId: string;
-  status: "PENDING" | "COMPLETED";
+  status: string;
   startsAt: string;
   endsAt: string;
   customerEmail: string;
@@ -123,6 +123,44 @@ function hoverClasses(tool: CalendarTool) {
 }
 
 /**
+ * Stable client clock for the "now" marker.
+ * getSnapshot must return the same value between ticks — a fresh Date.now()
+ * each read triggers React's "Maximum update depth exceeded" loop.
+ */
+let cachedNowMs = 0;
+const nowListeners = new Set<() => void>();
+let nowTimer: ReturnType<typeof setInterval> | null = null;
+
+function subscribeToNow(onStoreChange: () => void) {
+  nowListeners.add(onStoreChange);
+  if (nowTimer == null) {
+    cachedNowMs = Date.now();
+    nowTimer = setInterval(() => {
+      cachedNowMs = Date.now();
+      nowListeners.forEach((listener) => listener());
+    }, 60_000);
+  }
+  return () => {
+    nowListeners.delete(onStoreChange);
+    if (nowListeners.size === 0 && nowTimer != null) {
+      clearInterval(nowTimer);
+      nowTimer = null;
+    }
+  };
+}
+
+function getNowSnapshot() {
+  if (cachedNowMs === 0) {
+    cachedNowMs = Date.now();
+  }
+  return cachedNowMs;
+}
+
+function getNowServerSnapshot(): number | null {
+  return null;
+}
+
+/**
  * Displays and manages a weekly availability calendar with booking information.
  *
  * @param slots - Availability slots shown in the calendar
@@ -142,15 +180,7 @@ export function WeekCalendar({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  // Client-only "now" marker — avoids hydration mismatch and effect setState lint.
-  const nowMs = useSyncExternalStore(
-    (onStoreChange) => {
-      const id = window.setInterval(onStoreChange, 60_000);
-      return () => window.clearInterval(id);
-    },
-    () => Date.now(),
-    () => null,
-  );
+  const nowMs = useSyncExternalStore(subscribeToNow, getNowSnapshot, getNowServerSnapshot);
   const now = nowMs == null ? null : new Date(nowMs);
 
   const days = useMemo(
