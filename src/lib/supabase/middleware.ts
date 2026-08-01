@@ -36,10 +36,6 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isAuthRoute =
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/register") ||
-    pathname.startsWith("/auth");
   const isProtectedRoute =
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/settings") ||

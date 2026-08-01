@@ -26,6 +26,7 @@ import {
 } from "@/validators/auth";
 import { getDefaultShopId } from "@/lib/tenancy/get-shop";
 import { homePathForRole } from "@/lib/auth/home-path";
+import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { env } from "@/env";
 
 export async function signInWithEmail(
@@ -48,7 +49,8 @@ export async function signInWithEmail(
 
   await syncUserFromAuth();
   const current = await getCurrentUser();
-  redirect(homePathForRole(current?.role ?? "USER"));
+  const roleHome = homePathForRole(current?.role ?? "USER");
+  redirect(safeRedirectPath(parsed.data.redirectTo, roleHome));
 }
 
 export async function signUpWithEmail(
@@ -173,41 +175,42 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
 }
 
 async function syncUserRecord(userId: string, email: string, name: string) {
+  const normalizedEmail = email.trim().toLowerCase();
   const userById = await findUserById(userId);
 
   if (userById) {
     await updateUser(userId, {
-      email,
+      email: normalizedEmail,
       name,
     });
     await ensureProfile(userId);
     await ensureDefaultCustomerMembership(userId);
-    await maybeBootstrapAdmin(userId, email);
+    await maybeBootstrapAdmin(userId, normalizedEmail);
     return;
   }
 
-  const userByEmail = await findUserByEmail(email);
+  const userByEmail = await findUserByEmail(normalizedEmail);
 
   if (userByEmail) {
-    await updateUserByEmail(email, {
+    await updateUserByEmail(normalizedEmail, {
       id: userId,
       name,
     });
     await ensureProfile(userId);
     await ensureDefaultCustomerMembership(userId);
-    await maybeBootstrapAdmin(userId, email);
+    await maybeBootstrapAdmin(userId, normalizedEmail);
     return;
   }
 
   await createUser({
     id: userId,
-    email,
+    email: normalizedEmail,
     name,
   });
 
   await ensureProfile(userId);
   await ensureDefaultCustomerMembership(userId);
-  await maybeBootstrapAdmin(userId, email);
+  await maybeBootstrapAdmin(userId, normalizedEmail);
 }
 
 async function maybeBootstrapAdmin(userId: string, email: string) {

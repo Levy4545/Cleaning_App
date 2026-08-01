@@ -43,5 +43,6 @@ export async function getDefaultShopId(): Promise<string> {
  * Later: parse `{slug}.cleaning.com` and look up shops.subdomain.
  */
 export async function resolveShopFromHost(_host: string | null): Promise<Shop> {
+  void _host;
   return getDefaultShop();
 }

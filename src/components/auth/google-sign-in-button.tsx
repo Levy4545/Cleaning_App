@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/client";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
+import { safeRedirectPath } from "@/lib/auth/safe-redirect";
+
 type GoogleSignInButtonProps = {
   redirectTo?: string;
 };
@@ -33,7 +35,7 @@ function GoogleIcon() {
   );
 }
 
-export function GoogleSignInButton({ redirectTo = "/dashboard" }: GoogleSignInButtonProps) {
+export function GoogleSignInButton({ redirectTo }: GoogleSignInButtonProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -42,10 +44,15 @@ export function GoogleSignInButton({ redirectTo = "/dashboard" }: GoogleSignInBu
     setError(null);
 
     const supabase = createClient();
+    const callback = new URL("/auth/callback", window.location.origin);
+    if (redirectTo) {
+      callback.searchParams.set("next", safeRedirectPath(redirectTo));
+    }
+
     const { error: authError } = await supabase.auth.signInWithOAuth({
       provider: "google",
       options: {
-        redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+        redirectTo: callback.toString(),
         queryParams: {
           access_type: "offline",
           prompt: "consent",

@@ -54,9 +54,13 @@ export async function createAvailabilitySlot(
     status: parsed.data.status,
   });
 
+  if (!slot) {
+    return { success: false, error: "Failed to create slot" };
+  }
+
   revalidatePath("/admin/calendar");
   revalidatePath("/book");
-  return { success: true, data: { id: slot!.id } };
+  return { success: true, data: { id: slot.id } };
 }
 
 export async function updateAvailabilitySlot(

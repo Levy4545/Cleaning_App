@@ -14,7 +14,7 @@ import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { formatDeliveryMode, formatMoney, formatTime } from "@/lib/format";
-import { serviceIcon } from "@/lib/service-icon";
+import { ServiceIcon } from "@/lib/service-icon";
 
 type ServiceOption = {
   id: string;
@@ -49,6 +49,13 @@ function dayKey(iso: string) {
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 }
 
+function initialModeForService(service?: ServiceOption): DeliveryMode {
+  const modes = service?.deliveryModes ?? [];
+  if (modes.includes("DROP_OFF")) return "DROP_OFF";
+  if (modes.includes("ON_SITE")) return "ON_SITE";
+  return "DROP_OFF";
+}
+
 export function BookingForm({
   services,
   slots,
@@ -59,12 +66,14 @@ export function BookingForm({
   initialServiceId?: string;
 }) {
   const router = useRouter();
+  const initialService =
+    services.find((s) => s.id === initialServiceId) ?? services[0] ?? undefined;
 
   const [step, setStep] = useState(0);
-  const [serviceId, setServiceId] = useState(
-    services.find((s) => s.id === initialServiceId)?.id ?? services[0]?.id ?? "",
+  const [serviceId, setServiceId] = useState(initialService?.id ?? "");
+  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>(() =>
+    initialModeForService(initialService),
   );
-  const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>("DROP_OFF");
   const [itemType, setItemType] = useState<ItemType>("CARPET");
   const [quantity, setQuantity] = useState(1);
   const [slotId, setSlotId] = useState("");
@@ -105,10 +114,7 @@ export function BookingForm({
 
   const selectService = (next: ServiceOption) => {
     setServiceId(next.id);
-    const modes = next.deliveryModes;
-    if (!modes.includes(deliveryMode)) {
-      setDeliveryMode(modes.includes("DROP_OFF") ? "DROP_OFF" : "ON_SITE");
-    }
+    setDeliveryMode(initialModeForService(next));
   };
 
   const stepError = (): string | null => {
@@ -187,7 +193,6 @@ export function BookingForm({
             >
               <div className="grid gap-3 sm:grid-cols-2">
                 {services.map((service) => {
-                  const Icon = serviceIcon(null, service.name);
                   const active = service.id === serviceId;
 
                   return (
@@ -203,7 +208,8 @@ export function BookingForm({
                           : "border-line bg-surface hover:border-line-strong hover:bg-elevated",
                       )}
                     >
-                      <Icon
+                      <ServiceIcon
+                        serviceName={service.name}
                         className={cn("h-6 w-6 shrink-0", active ? "text-gold" : "text-ash")}
                         strokeWidth={1.25}
                       />
@@ -447,7 +453,8 @@ export function BookingForm({
               </dl>
 
               <Alert tone="info" className="mt-4">
-                Payment is cash on completion. You can cancel while the request is pending.
+                Payment is cash on completion. You can cancel while the request is pending
+                or after approval (before the job starts).
               </Alert>
             </StepShell>
           ) : null}

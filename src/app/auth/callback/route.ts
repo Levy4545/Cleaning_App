@@ -1,12 +1,14 @@
 import { NextResponse } from "next/server";
 
-import { syncUserFromAuth } from "@/actions/auth";
+import { getCurrentUser, syncUserFromAuth } from "@/actions/auth";
+import { homePathForRole } from "@/lib/auth/home-path";
+import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { createClient } from "@/lib/supabase/server";
 
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
-  const next = searchParams.get("next") ?? "/dashboard";
+  const requestedNext = searchParams.get("next");
 
   if (code) {
     const supabase = await createClient();
@@ -14,6 +16,9 @@ export async function GET(request: Request) {
 
     if (!error) {
       await syncUserFromAuth();
+      const current = await getCurrentUser();
+      const fallback = homePathForRole(current?.role ?? "USER");
+      const next = requestedNext ? safeRedirectPath(requestedNext, fallback) : fallback;
       return NextResponse.redirect(`${origin}${next}`);
     }
   }

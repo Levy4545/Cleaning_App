@@ -1,4 +1,4 @@
-import { and, eq } from "drizzle-orm";
+import { and, asc, eq } from "drizzle-orm";
 
 import { db } from "@/db";
 import { serviceCategories, services } from "@/db/schema";
@@ -7,7 +7,8 @@ export async function listActiveServices(shopId: string) {
   return db
     .select()
     .from(services)
-    .where(and(eq(services.shopId, shopId), eq(services.isActive, true)));
+    .where(and(eq(services.shopId, shopId), eq(services.isActive, true)))
+    .orderBy(asc(services.name));
 }
 
 export async function listCategories(shopId: string) {

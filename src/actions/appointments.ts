@@ -3,14 +3,13 @@
 import { revalidatePath } from "next/cache";
 
 import { env } from "@/env";
-import { requireAdmin, requireCleaner, requireUser } from "@/lib/auth/guards";
+import { requireAdmin, requireUser } from "@/lib/auth/guards";
 import { getDefaultShopId } from "@/lib/tenancy/get-shop";
 import {
   createBooking,
   findAppointmentById,
   transitionAppointment,
 } from "@/db/queries/appointments";
-import { createAddress } from "@/db/queries/addresses";
 import { findServiceById } from "@/db/queries/services";
 import { findUserById, listUsersByRole } from "@/db/queries/users";
 import { createAndSendNotification } from "@/db/queries/notifications";
@@ -92,23 +91,26 @@ export async function bookAppointment(
     return { success: false, error: "Service does not support this delivery mode" };
   }
 
-  let addressId: string | null = null;
+  let address:
+    | {
+        line1: string;
+        city: string;
+        postalCode?: string;
+        label?: string;
+      }
+    | null = null;
 
   if (preferredMode === "ON_SITE") {
     if (!parsed.data.addressLine1?.trim() || !parsed.data.addressCity?.trim()) {
       return { success: false, error: "Address is required for on-site preference" };
     }
 
-    const address = await createAddress({
-      userId: user.id,
-      shopId,
+    address = {
       line1: parsed.data.addressLine1.trim(),
       city: parsed.data.addressCity.trim(),
       postalCode: parsed.data.addressPostalCode?.trim(),
-      isDefault: true,
       label: "Booking address",
-    });
-    addressId = address?.id ?? null;
+    };
   }
 
   try {
@@ -117,7 +119,7 @@ export async function bookAppointment(
       customerId: user.id,
       serviceId: service.id,
       slotId: parsed.data.slotId,
-      addressId,
+      address,
       deliveryMode: preferredMode,
       notes: parsed.data.notes,
       amount: service.basePrice,
@@ -197,7 +199,7 @@ export async function approveAppointment(
 export async function rejectAppointment(
   input: RejectAppointmentInput,
 ): Promise<ActionResult> {
-  const staff = await requireCleaner();
+  const admin = await requireAdmin();
   const parsed = rejectAppointmentSchema.safeParse(input);
 
   if (!parsed.success) {
@@ -211,7 +213,7 @@ export async function rejectAppointment(
       appointmentId: parsed.data.appointmentId,
       shopId,
       to: "REJECTED",
-      actorId: staff.id,
+      actorId: admin.id,
       note: `Rejected: ${parsed.data.reason}`,
       statusNote: parsed.data.reason,
     });
@@ -234,6 +236,49 @@ export async function rejectAppointment(
     return {
       success: false,
       error: error instanceof Error ? error.message : "Could not reject",
+    };
+  }
+}
+
+export async function cancelAppointment(appointmentId: string): Promise<ActionResult> {
+  const user = await requireUser();
+  const shopId = await getDefaultShopId();
+
+  const existing = await findAppointmentById(appointmentId, shopId);
+  if (!existing || existing.customerId !== user.id) {
+    return { success: false, error: "Appointment not found" };
+  }
+
+  if (existing.status !== "PENDING" && existing.status !== "APPROVED") {
+    return { success: false, error: "Only pending or approved bookings can be cancelled" };
+  }
+
+  try {
+    const updated = await transitionAppointment({
+      appointmentId,
+      shopId,
+      to: "CANCELLED_BY_USER",
+      actorId: user.id,
+      note: "Cancelled by customer",
+    });
+
+    if (updated) {
+      await notifyAdmins(
+        shopId,
+        "Booking cancelled",
+        `Customer ${user.email} cancelled appointment ${updated.id}.`,
+      );
+    }
+
+    revalidatePath("/appointments");
+    revalidatePath("/admin/appointments");
+    revalidatePath("/book");
+    revalidatePath("/admin/calendar");
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Could not cancel",
     };
   }
 }

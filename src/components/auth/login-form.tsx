@@ -15,7 +15,7 @@ import { PasswordInput } from "@/components/ui/password-input";
 
 export function LoginForm() {
   const searchParams = useSearchParams();
-  const redirectTo = searchParams.get("redirectTo") ?? "/dashboard";
+  const redirectTo = searchParams.get("redirectTo");
   const authError = searchParams.get("error");
 
   const [error, setError] = useState<string | null>(
@@ -29,6 +29,7 @@ export function LoginForm() {
       const result = await signInWithEmail({
         email: formData.get("email") as string,
         password: formData.get("password") as string,
+        redirectTo: redirectTo ?? undefined,
       });
 
       if (result && !result.success) {
@@ -45,7 +46,7 @@ export function LoginForm() {
       </div>
 
       <form action={handleSubmit} className="space-y-5">
-        <input type="hidden" name="redirectTo" value={redirectTo} />
+        {redirectTo ? <input type="hidden" name="redirectTo" value={redirectTo} /> : null}
 
         <div className="space-y-2">
           <Label htmlFor="email">Email</Label>
@@ -83,7 +84,7 @@ export function LoginForm() {
         <div className="h-px flex-1 bg-line" />
       </div>
 
-      <GoogleSignInButton redirectTo={redirectTo} />
+      <GoogleSignInButton redirectTo={redirectTo ?? undefined} />
 
       <p className="mt-7 text-center text-sm text-ash">
         No account?{" "}

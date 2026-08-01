@@ -18,6 +18,7 @@
  *   --keep-email=x     When wiping users, keep this email (repeatable)
  *   --shop=<uuid>      Limit shop-scoped tables to this shop (default: all shops)
  *   --include-shops    With `all`, also delete shops rows (dangerous)
+ *   --allow-remote     Required when DATABASE_URL host is not localhost
  */
 import postgres from "postgres";
 
@@ -58,6 +59,7 @@ type Options = {
   keepEmails: string[];
   shopId: string | null;
   includeShops: boolean;
+  allowRemote: boolean;
 };
 
 function printHelp() {
@@ -82,6 +84,7 @@ Flags:
   --keep-email=addr     Keep this email when wiping users (repeatable)
   --shop=<uuid>         Limit shop-scoped deletes (omit = all shops)
   --include-shops       Also delete shops when using "all"
+  --allow-remote        Required for non-localhost DATABASE_URL hosts
 
 Examples:
   npm run db:wipe -- appointments availability
@@ -89,6 +92,15 @@ Examples:
   npm run db:wipe -- users --keep-admins --yes
   npm run db:wipe -- all --shop=${DEFAULT_SHOP_ID} --yes
 `);
+}
+
+function isLocalDatabaseHost(url: string) {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return host === "localhost" || host === "127.0.0.1" || host === "::1";
+  } catch {
+    return false;
+  }
 }
 
 function parseArgs(argv: string[]): Options | "help" {
@@ -100,6 +112,7 @@ function parseArgs(argv: string[]): Options | "help" {
   let yes = false;
   let keepAdmins = false;
   let includeShops = false;
+  let allowRemote = false;
   let shopId: string | null = null;
   const keepEmails: string[] = [];
 
@@ -114,6 +127,10 @@ function parseArgs(argv: string[]): Options | "help" {
     }
     if (raw === "--include-shops") {
       includeShops = true;
+      continue;
+    }
+    if (raw === "--allow-remote") {
+      allowRemote = true;
       continue;
     }
     if (raw.startsWith("--keep-email=")) {
@@ -151,6 +168,7 @@ function parseArgs(argv: string[]): Options | "help" {
     keepEmails,
     shopId,
     includeShops,
+    allowRemote,
   };
 }
 
@@ -184,6 +202,18 @@ async function main() {
   const url = process.env.DATABASE_URL;
   if (!url) {
     throw new Error("DATABASE_URL is required");
+  }
+
+  if (!isLocalDatabaseHost(url) && !parsed.allowRemote) {
+    let host = "(unparseable)";
+    try {
+      host = new URL(url).hostname;
+    } catch {
+      // ignore
+    }
+    throw new Error(
+      `Refusing to wipe non-local database host "${host}". Pass --allow-remote if you really mean it.`,
+    );
   }
 
   const sql = postgres(url, { max: 1 });

@@ -1,12 +1,16 @@
-import { and, desc, eq, gte, notExists, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, notExists, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
+  addresses,
   appointmentItems,
   appointments,
   availabilitySlots,
   jobLogs,
   payments,
+  reviews,
+  services,
+  users,
   type AppointmentStatus,
   type DeliveryMode,
   type ItemType,
@@ -158,7 +162,7 @@ export async function listCalendarBookings(shopId: string) {
     .where(
       and(
         eq(appointments.shopId, shopId),
-        sql`${appointments.status} in ('PENDING','COMPLETED')`,
+        sql`${appointments.status} in ('PENDING','APPROVED','ASSIGNED','IN_PROGRESS','COMPLETED')`,
       ),
     )
     .orderBy(availabilitySlots.startsAt);
@@ -194,6 +198,65 @@ export async function listAppointmentsForShop(
     .orderBy(desc(appointments.createdAt));
 }
 
+/** Single-query inbox payload + one batched items query (avoids N×7). */
+export async function listShopAppointmentsInbox(shopId: string) {
+  const rows = await db
+    .select({
+      id: appointments.id,
+      status: appointments.status,
+      deliveryMode: appointments.deliveryMode,
+      notes: appointments.notes,
+      statusNote: appointments.statusNote,
+      createdAt: appointments.createdAt,
+      customerId: appointments.customerId,
+      serviceName: services.name,
+      servicePrice: services.basePrice,
+      customerName: users.name,
+      customerEmail: users.email,
+      customerPhone: users.phone,
+      slotStartsAt: availabilitySlots.startsAt,
+      slotEndsAt: availabilitySlots.endsAt,
+      paymentAmount: payments.amount,
+      paymentStatus: payments.status,
+      addressLine1: addresses.line1,
+      addressCity: addresses.city,
+      addressPostalCode: addresses.postalCode,
+      reviewRating: reviews.rating,
+      reviewComment: reviews.comment,
+      reviewCreatedAt: reviews.createdAt,
+    })
+    .from(appointments)
+    .leftJoin(services, eq(appointments.serviceId, services.id))
+    .leftJoin(users, eq(appointments.customerId, users.id))
+    .leftJoin(availabilitySlots, eq(appointments.slotId, availabilitySlots.id))
+    .leftJoin(payments, eq(payments.appointmentId, appointments.id))
+    .leftJoin(addresses, eq(appointments.addressId, addresses.id))
+    .leftJoin(reviews, eq(reviews.appointmentId, appointments.id))
+    .where(eq(appointments.shopId, shopId))
+    .orderBy(desc(appointments.createdAt));
+
+  const ids = rows.map((row) => row.id);
+  const items =
+    ids.length === 0
+      ? []
+      : await db
+          .select()
+          .from(appointmentItems)
+          .where(inArray(appointmentItems.appointmentId, ids));
+
+  const itemsByAppointment = new Map<string, typeof items>();
+  for (const item of items) {
+    const list = itemsByAppointment.get(item.appointmentId) ?? [];
+    list.push(item);
+    itemsByAppointment.set(item.appointmentId, list);
+  }
+
+  return rows.map((row) => ({
+    ...row,
+    items: itemsByAppointment.get(row.id) ?? [],
+  }));
+}
+
 export async function findAppointmentById(id: string, shopId: string) {
   const [row] = await db
     .select()
@@ -225,6 +288,12 @@ export async function createBooking(input: {
   serviceId: string;
   slotId: string;
   addressId?: string | null;
+  address?: {
+    line1: string;
+    city: string;
+    postalCode?: string;
+    label?: string;
+  } | null;
   deliveryMode: DeliveryMode;
   notes?: string;
   amount: string;
@@ -267,6 +336,24 @@ export async function createBooking(input: {
       throw new Error("This time window was just booked by someone else. Pick another slot.");
     }
 
+    let addressId = input.addressId ?? null;
+    if (input.address) {
+      // One-off booking address — do not flip the customer's default address.
+      const [address] = await tx
+        .insert(addresses)
+        .values({
+          userId: input.customerId,
+          shopId: input.shopId,
+          line1: input.address.line1,
+          city: input.address.city,
+          postalCode: input.address.postalCode,
+          label: input.address.label ?? "Booking address",
+          isDefault: false,
+        })
+        .returning();
+      addressId = address?.id ?? null;
+    }
+
     const [appointment] = await tx
       .insert(appointments)
       .values({
@@ -274,7 +361,7 @@ export async function createBooking(input: {
         customerId: input.customerId,
         serviceId: input.serviceId,
         slotId: input.slotId,
-        addressId: input.addressId ?? null,
+        addressId,
         deliveryMode: input.deliveryMode,
         notes: input.notes,
         status: "PENDING",

@@ -12,7 +12,7 @@ import { requireUser } from "@/lib/auth/guards";
 import { getDefaultShopId } from "@/lib/tenancy/get-shop";
 import { findSlotById, listAppointmentsForCustomer } from "@/db/queries/appointments";
 import { findServiceById, listActiveServices } from "@/db/queries/services";
-import { serviceIcon } from "@/lib/service-icon";
+import { ServiceIcon } from "@/lib/service-icon";
 import { formatMoney, formatSlotRange } from "@/lib/format";
 
 const OPEN_STATUSES = ["PENDING", "APPROVED", "ASSIGNED", "IN_PROGRESS"];
@@ -115,19 +115,20 @@ export default async function DashboardPage() {
               <p className="text-sm text-ash">No services available yet.</p>
             ) : (
               <div className="grid grid-cols-2 gap-3">
-                {services.slice(0, 4).map((service) => {
-                  const Icon = serviceIcon(null, service.name);
-                  return (
+                {services.slice(0, 4).map((service) => (
                     <Link
                       key={service.id}
                       href={`/book?service=${service.id}`}
                       className="flex flex-col items-center gap-2 rounded-lg border border-line bg-surface px-3 py-4 text-center transition-colors hover:border-gold/40 hover:bg-elevated"
                     >
-                      <Icon className="h-6 w-6 text-gold" strokeWidth={1.25} />
+                      <ServiceIcon
+                        serviceName={service.name}
+                        className="h-6 w-6 text-gold"
+                        strokeWidth={1.25}
+                      />
                       <span className="text-xs leading-tight text-ash">{service.name}</span>
                     </Link>
-                  );
-                })}
+                  ))}
               </div>
             )}
           </Card>
@@ -187,12 +188,10 @@ function NextAppointment({
   status: string;
   window: string;
 }) {
-  const Icon = serviceIcon(null, serviceName);
-
   return (
     <div className="flex flex-wrap items-center gap-4">
       <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-gold/30 bg-gold/5">
-        <Icon className="h-6 w-6 text-gold" strokeWidth={1.25} />
+        <ServiceIcon serviceName={serviceName} className="h-6 w-6 text-gold" strokeWidth={1.25} />
       </span>
 
       <div className="min-w-0 flex-1">

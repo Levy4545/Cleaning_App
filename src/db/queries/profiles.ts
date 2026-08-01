@@ -14,17 +14,26 @@ export async function findProfileByUserId(userId: string) {
 }
 
 export async function createProfile(userId: string) {
-  await db.insert(profiles).values({
-    userId,
-  });
+  const [row] = await db
+    .insert(profiles)
+    .values({
+      userId,
+    })
+    .returning();
+  return row ?? null;
 }
 
 export async function ensureProfile(userId: string) {
-  const profile = await findProfileByUserId(userId);
-
-  if (!profile) {
-    await createProfile(userId);
+  const existing = await findProfileByUserId(userId);
+  if (existing) {
+    return existing;
   }
 
-  return profile;
+  const created = await createProfile(userId);
+  if (created) {
+    return created;
+  }
+
+  // Race: another request may have inserted concurrently.
+  return findProfileByUserId(userId);
 }
