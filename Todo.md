@@ -1,7 +1,7 @@
 # Cleaning App — Development Todo
 
 Derived from [`docs/uml/`](./docs/uml/) (single-shop design).  
-Marketplace multi-tenant work lives in [`docs/uml-marketplace/`](./docs/uml-marketplace/). Lightweight scaffolds (`shops`, `shopId`, `shop_members`, theme JSON) are already in the schema so future adaptation is easier — **no multi-tenant UI yet**.
+Marketplace multi-tenant work lives in [`docs/uml-marketplace/`](./docs/uml-marketplace/). Lightweight scaffolds (`shops`, `shopId`, `shop_members`, theme JSON) are already in the schema — **no multi-tenant UI yet**.
 
 ## Agreed MVP (deployment target)
 
@@ -36,23 +36,24 @@ Cash payment tracking and cleaner assignment remain in the schema for later; the
 
 ---
 
-## 0. Foundation (current starter)
+## 0. Foundation
 
 | Done | Priority | Task | Notes |
 | --- | --- | --- | --- |
-| [x] | Critical | Next.js App Router + TypeScript + Tailwind | Starter |
-| [x] | Critical | Supabase auth (email + Google OAuth callback) | Login/register/sign-out |
-| [x] | Critical | Middleware route protection | `/dashboard`, `/settings` |
+| [x] | Critical | Next.js App Router + TypeScript + Tailwind | Next 16 + Master-Gold theme |
+| [x] | Critical | Supabase auth (email + Google OAuth callback) | `next` / `redirectTo` validated |
+| [x] | Critical | Middleware route protection | `/dashboard`, `/settings`, `/book`, `/appointments`, `/admin/*` |
 | [x] | Critical | Env validation (`src/env.ts`) | Zod + optional notify keys |
-| [x] | Critical | Drizzle + Postgres Docker + migrations baseline | `users`, `profiles` |
-| [x] | Critical | Roles: `USER` / `ADMIN` / `CLEANER` | Enum + `requireCleaner` |
-| [x] | Critical | Marketplace scaffold (silent) | `shops`, `shop_members`, `shopId` on business tables, `getDefaultShop()` |
+| [x] | Critical | Drizzle + Postgres Docker + migrations | Domain schema through `0003` (`status_note`) |
+| [x] | Critical | Roles: `USER` / `ADMIN` / `CLEANER` | Guards; roles not shown in UI chrome |
+| [x] | Critical | Marketplace scaffold (silent) | `shops`, `shop_members`, `shopId`, `getDefaultShop()` |
 | [x] | Critical | Notification facade (email/SMS stub + Resend/Twilio) | Console stub when unset |
-| [x] | Critical | Reviews table + query helpers | For post-complete reviews |
-| [x] | Critical | Auth guards wired into admin pages | `/admin` uses `requireAdmin` |
-| [ ] | High | Apply RLS policies in DB | Extend `supabase/rls.sql` |
-| [ ] | Moderate | Align `eslint-config-next` with Next major | Hygiene |
-| [ ] | Low | Remove unused deps (e.g. accidental packages) | Code hygiene |
+| [x] | Critical | Reviews table + query helpers | Post-complete reviews |
+| [x] | Critical | Auth guards on admin pages | `requireAdmin` |
+| [x] | High | RLS policies file for all domain tables | `supabase/rls.sql` — apply in Supabase SQL editor |
+| [x] | Moderate | Align `eslint-config-next` with Next major | `lint` → `eslint .` |
+| [x] | Low | Remove unused deps | Dropped `notenv` |
+| [x] | Low | `db:wipe` localhost guard | Requires `--allow-remote` otherwise |
 
 ---
 
@@ -60,57 +61,46 @@ Cash payment tracking and cleaner assignment remain in the schema for later; the
 
 | Done | Priority | Task | Notes |
 | --- | --- | --- | --- |
-| [x] | Critical | Promote admin (`ADMIN_BOOTSTRAP_EMAIL` or `npm run db:promote-admin`) | |
-| [x] | Critical | `/admin` shell + overview | |
-| [x] | Critical | `/admin/calendar` create/list slots | |
-| [x] | Critical | `/admin/appointments` approve / reject / complete | + notify stubs |
-| [x] | Critical | `/book` booking form | PENDING + notify admins |
-| [x] | Critical | `/appointments` list + review after COMPLETED | |
-| [x] | Critical | Middleware protects `/admin`, `/book`, `/appointments` | |
-| [ ] | High | Editable profile / phone for SMS | Optional for SMS channel |
-| [ ] | Moderate | Richer calendar UX | |
+| [x] | Critical | Promote admin (`ADMIN_BOOTSTRAP_EMAIL` or `npm run db:promote-admin`) | Email lookup is case-insensitive |
+| [x] | Critical | `/admin` shell + overview | Dark/gold shell |
+| [x] | Critical | `/admin/calendar` paint-style week slots | Free / occupied / unavailable |
+| [x] | Critical | `/admin/appointments` inbox approve / reject / complete | Reject requires reason → `statusNote` |
+| [x] | Critical | `/book` 4-step wizard | Mode initialized from selected service |
+| [x] | Critical | `/appointments` list + cancel + review | Cancel pending/approved |
+| [x] | Critical | Middleware protects customer + admin routes | |
+| [x] | Critical | Booking slot lock / race handling | `FOR UPDATE` + active status check |
+| [x] | High | Editable profile / phone | `/settings` |
+| [x] | Moderate | Week calendar UX | Paint tools + arrows |
+| [ ] | Moderate | Admin catalog CRUD UI | Seed covers catalog for now |
+| [ ] | High | Cleaner-facing UI | Schema + guards only |
+| [ ] | High | Automated tests | Transitions / booking race |
 
 ---
 
 ## 1. Domain schema & data layer
 
-Source: [`docs/uml/02-class-diagram.md`](./docs/uml/02-class-diagram.md)
-
 | Done | Priority | Task | Notes |
 | --- | --- | --- | --- |
-| [x] | Critical | Extend `user_role` enum with `CLEANER`; add `phone` on `users` | Done |
-| [x] | Critical | Add `preferredLanguage` on `profiles` | Done |
-| [x] | Critical | Create `addresses` table | + `shopId` scaffold |
-| [x] | Critical | Create `service_categories` + `services` | Seeded samples |
-| [x] | Critical | Create domain enums | Delivery, items, appointment, payment, slot, notify |
-| [x] | Critical | Create `availability_slots` | + capacity / bookedCount |
-| [x] | Critical | Create `appointments` + `appointment_items` | |
-| [x] | Critical | Create `payments` (CASH only) | |
-| [x] | High | Create `job_logs` | |
-| [x] | High | Create `messages` | |
-| [x] | High | Create `notifications` | EMAIL / SMS / IN_APP |
-| [x] | Critical | Create `reviews` | MVP end-state |
-| [x] | Critical | Marketplace tables `shops` + `shop_members` | Silent scaffold |
+| [x] | Critical | Extend roles + phone on `users` | |
+| [x] | Critical | Addresses, services, slots, appointments, payments, reviews, … | |
 | [x] | Critical | Migrations + seed (`npm run db:seed`) | Default shop + catalog |
-| [x] | Critical | Query helpers + booking/transition helpers | `src/db/queries/*` |
+| [x] | Critical | Query helpers + booking/transition helpers | Address created inside booking tx |
 | [x] | High | Appointment status transition helper | Allows APPROVED→COMPLETED for MVP |
-| [x] | Moderate | Seed script: sample services | Done |
+| [x] | Moderate | Ordered active services | `ORDER BY name` |
 
 ---
 
 ## 2. Authorization & routing
 
-Source: [`docs/uml/01-use-cases.md`](./docs/uml/01-use-cases.md), [`05-components.md`](./docs/uml/05-components.md)
-
 | Done | Priority | Task | Notes |
 | --- | --- | --- | --- |
-| [ ] | Critical | Role-based redirects after login | USER → dashboard; ADMIN → `/admin`; CLEANER → `/cleaner` |
-| [ ] | Critical | Protect `/admin/*` with `requireAdmin` | Middleware + server guards |
-| [ ] | Critical | Protect `/cleaner/*` with `requireCleaner` | Middleware + server guards |
-| [ ] | Critical | Honor `redirectTo` on login | Currently ignored (always `/dashboard`) |
-| [ ] | High | Admin user management UI (promote cleaner/admin) | Edit roles safely |
-| [ ] | Moderate | Sync `AuthUser` type with `role` | Type hygiene |
-| [ ] | Moderate | Loading / error / not-found boundaries | App Router UX |
+| [x] | Critical | Role-based redirects after login | `homePathForRole` + safe `redirectTo` |
+| [x] | Critical | Protect `/admin/*` with `requireAdmin` | Middleware + server guards |
+| [~] | Critical | Protect `/cleaner/*` with `requireCleaner` | Guard exists; no `/cleaner` UI yet |
+| [x] | Critical | Honor `redirectTo` on login | Email + OAuth callback validation |
+| [ ] | High | Admin user management UI (promote cleaner/admin) | CLI promote exists |
+| [x] | Moderate | Sync `AuthUser` type with `role` | |
+| [ ] | Moderate | Loading / error / not-found boundaries | |
 
 ---
 
@@ -118,11 +108,11 @@ Source: [`docs/uml/01-use-cases.md`](./docs/uml/01-use-cases.md), [`05-component
 
 | Done | Priority | Task | Notes |
 | --- | --- | --- | --- |
-| [ ] | Critical | Editable profile (name, phone, avatar, bio) | Customer/Admin/Cleaner own profile |
-| [ ] | Critical | CRUD customer addresses | Required for ON_SITE bookings |
-| [ ] | High | Admin can edit any user profile | Use case `EditUserProfiles` |
-| [ ] | Moderate | Default address flag + “use last address” in booking | QoL |
-| [ ] | Low | Avatar upload to storage (Supabase Storage) | Else URL-only is fine for MVP |
+| [x] | Critical | Editable profile (name, phone) | `/settings` |
+| [~] | Critical | CRUD customer addresses | Booking creates one-off ON_SITE address in-tx |
+| [ ] | High | Admin can edit any user profile | |
+| [ ] | Moderate | Default address flag + “use last address” in booking | |
+| [ ] | Low | Avatar upload to storage | |
 
 ---
 
@@ -130,28 +120,26 @@ Source: [`docs/uml/01-use-cases.md`](./docs/uml/01-use-cases.md), [`05-component
 
 | Done | Priority | Task | Notes |
 | --- | --- | --- | --- |
-| [ ] | Critical | Admin: manage categories & services | `/admin/services` |
-| [ ] | Critical | Public/customer browse active services | `/book` step 1 or `/services` |
-| [ ] | Critical | Service fields: delivery modes, duration, base price, active flag | UML Service |
-| [ ] | Moderate | Disable booking for inactive services | Soft delete pattern |
-| [ ] | Low | Service images / icons per category | UX polish |
+| [ ] | Critical | Admin: manage categories & services UI | `/admin/services` |
+| [x] | Critical | Customer browse active services | `/book` step 1 |
+| [x] | Critical | Service fields: delivery modes, duration, base price, active | Seeded |
+| [x] | Moderate | Disable booking for inactive services | `isActive` checked |
+| [ ] | Low | Service images / icons per category | Icon heuristics exist |
 
 ---
 
 ## 5. Availability calendar (Admin)
 
-Source: [`docs/uml/03-sequences.md`](./docs/uml/03-sequences.md) — calendar sequence
-
 | Done | Priority | Task | Notes |
 | --- | --- | --- | --- |
-| [ ] | Critical | Admin calendar UI to create/edit slots | `/admin/calendar` |
-| [ ] | Critical | Slot fields: start/end, delivery mode, capacity, status | OPEN / FULL / BLOCKED |
-| [ ] | Critical | Prevent unsafe edits on slots with active bookings | Sequence rule |
-| [ ] | High | Block / unblock blackout times | SlotStatus BLOCKED |
-| [ ] | High | Auto mark FULL when capacity reached; reopen on cancel | System behavior |
-| [ ] | Moderate | Recurring slot templates (e.g. Mon–Fri 9–17) | Admin QoL |
-| [ ] | Moderate | Holiday / blackout date helper | Backlog item 15 |
-| [ ] | Low | Calendar week/month views + drag to create | UX |
+| [x] | Critical | Admin calendar UI to create/edit slots | `/admin/calendar` |
+| [x] | Critical | Slot fields + OPEN / FULL / BLOCKED paint | Delivery/capacity simplified in UI |
+| [x] | Critical | Prevent unsafe edits with active bookings | |
+| [x] | High | Block / unblock blackout times | |
+| [x] | High | Hold FULL on book; reopen on cancel/reject | |
+| [ ] | Moderate | Recurring slot templates | |
+| [ ] | Moderate | Holiday / blackout date helper | |
+| [~] | Low | Week view + paint create | Done; drag polish later |
 
 ---
 
@@ -159,18 +147,18 @@ Source: [`docs/uml/03-sequences.md`](./docs/uml/03-sequences.md) — calendar se
 
 | Done | Priority | Task | Notes |
 | --- | --- | --- | --- |
-| [ ] | Critical | Booking wizard: service → items → mode → address/slot | `/book` |
-| [ ] | Critical | Appointment items: CAR / CARPET / CHAIR / COUCH / OTHER + details JSON | Item-specific forms |
-| [ ] | Critical | Enforce ON_SITE requires address; DROP_OFF does not | Delivery rules |
-| [ ] | Critical | Create appointment `PENDING` + payment `UNPAID` + capacity update | Atomic transaction |
-| [ ] | Critical | Customer appointment list + detail | `/appointments` |
-| [ ] | Critical | Customer cancel when `PENDING` or `APPROVED` | Status machine |
-| [ ] | High | Show estimated price from service basePrice × items | Before confirm |
-| [ ] | High | Email admin(s) on new booking | Notification + log |
-| [ ] | Moderate | Booking confirmation page with status timeline | UX |
-| [ ] | Moderate | Prevent double-booking race (row lock / capacity check) | Reliability |
-| [ ] | Low | Save draft booking in local state if auth expires mid-flow | QoL |
-| [ ] | Low | “Book again” from past appointment | QoL |
+| [x] | Critical | Booking wizard | `/book` |
+| [x] | Critical | Appointment items + details | |
+| [x] | Critical | ON_SITE requires address; DROP_OFF does not | |
+| [x] | Critical | Create `PENDING` + `UNPAID` + slot hold | Atomic transaction |
+| [x] | Critical | Customer appointment list | `/appointments` |
+| [x] | Critical | Customer cancel when `PENDING` or `APPROVED` | Reopens slot when free |
+| [x] | High | Show estimated price | Confirm step |
+| [x] | High | Notify admin(s) on new booking | |
+| [ ] | Moderate | Booking confirmation page with timeline | Redirects to list today |
+| [x] | Moderate | Prevent double-booking race | Row lock + active check |
+| [ ] | Low | Save draft if auth expires mid-flow | |
+| [ ] | Low | “Book again” from past appointment | |
 
 ---
 
@@ -178,16 +166,16 @@ Source: [`docs/uml/03-sequences.md`](./docs/uml/03-sequences.md) — calendar se
 
 | Done | Priority | Task | Notes |
 | --- | --- | --- | --- |
-| [ ] | Critical | Admin appointments inbox (filter by status) | `/admin/appointments` |
-| [ ] | Critical | Approve `PENDING` → `APPROVED` | + JobLog + email |
-| [ ] | Critical | Reject / cancel with reason | Free slot capacity |
-| [ ] | Critical | Assign cleaner `APPROVED` → `ASSIGNED` | Validate cleaner role |
-| [ ] | High | Quote override (adjust payment amount before approve) | Backlog item 12 — High for real shops |
-| [ ] | High | Mark cash payment PAID | Admin (cleaner optional) |
-| [ ] | High | Appointment detail with items, address, logs, messages | Ops hub |
-| [ ] | Moderate | Bulk filters: date, cleaner, unpaid, delivery mode | Ops QoL |
-| [ ] | Moderate | Reassign cleaner | Common ops need |
-| [ ] | Low | Printable day sheet / PDF for shop | Ops QoL |
+| [x] | Critical | Admin appointments inbox | Joined inbox query |
+| [x] | Critical | Approve `PENDING` → `APPROVED` | Confirms delivery mode |
+| [x] | Critical | Reject with required reason | Admin-only; frees slot |
+| [ ] | Critical | Assign cleaner `APPROVED` → `ASSIGNED` | Schema ready |
+| [ ] | High | Quote override before approve | |
+| [ ] | High | Mark cash payment PAID | |
+| [~] | High | Appointment detail in inbox | Master-detail UI |
+| [ ] | Moderate | Bulk filters: date, cleaner, unpaid | |
+| [ ] | Moderate | Reassign cleaner | |
+| [ ] | Low | Printable day sheet | |
 
 ---
 
@@ -196,12 +184,11 @@ Source: [`docs/uml/03-sequences.md`](./docs/uml/03-sequences.md) — calendar se
 | Done | Priority | Task | Notes |
 | --- | --- | --- | --- |
 | [ ] | Critical | Cleaner dashboard: assigned jobs | `/cleaner` |
-| [ ] | Critical | Start job → `IN_PROGRESS` | Guard: assigned cleaner only |
-| [ ] | Critical | Complete job → `COMPLETED` | + email customer |
-| [ ] | High | Cleaner can add completion notes | UML recommendation |
-| [ ] | High | Optional: cleaner mark cash collected | If policy allows |
-| [ ] | Moderate | Mobile-first cleaner UI | Field use |
-| [ ] | Future | Before/after photo upload | Backlog item 8 |
+| [ ] | Critical | Start / complete job | |
+| [ ] | High | Completion notes | |
+| [ ] | High | Optional: mark cash collected | |
+| [ ] | Moderate | Mobile-first cleaner UI | |
+| [ ] | Future | Before/after photo upload | |
 
 ---
 
@@ -209,14 +196,14 @@ Source: [`docs/uml/03-sequences.md`](./docs/uml/03-sequences.md) — calendar se
 
 | Done | Priority | Task | Notes |
 | --- | --- | --- | --- |
-| [ ] | High | Email provider integration (Resend/SMTP) | `src/lib/email` |
-| [ ] | High | System emails: booking created, approved, cancelled, completed | From sequences |
-| [ ] | High | Persist `notifications` rows (SENT/FAILED) | Audit |
-| [ ] | High | Admin compose email to a user | Use case `SendEmailNotification` |
-| [ ] | Moderate | In-app messages (optionally tied to appointment) | `/messages` or admin panel |
-| [ ] | Moderate | Unread message badge in header | UX |
-| [ ] | Low | Email templates (branded HTML) | Polish |
-| [ ] | Future | SMS / WhatsApp reminders | Backlog item 14 |
+| [~] | High | Email/SMS provider integration | Facade + stubs |
+| [x] | High | System notify: created, approved, rejected, cancelled, completed | |
+| [x] | High | Persist `notifications` rows | |
+| [ ] | High | Admin compose email to a user | |
+| [ ] | Moderate | In-app messages UI | Table exists |
+| [ ] | Moderate | Unread message badge | |
+| [ ] | Low | Branded HTML templates | |
+| [ ] | Future | SMS / WhatsApp reminders | |
 
 ---
 
@@ -224,34 +211,34 @@ Source: [`docs/uml/03-sequences.md`](./docs/uml/03-sequences.md) — calendar se
 
 | Done | Priority | Task | Notes |
 | --- | --- | --- | --- |
-| [ ] | Critical | Create UNPAID payment on booking | No card gateway |
+| [x] | Critical | Create UNPAID payment on booking | |
 | [ ] | Critical | Admin UI to mark PAID + `paidAt` | |
-| [ ] | Moderate | Manual refund status `REFUNDED_MANUAL` | Rare correction |
-| [ ] | Moderate | Unpaid filter / badge on admin lists | Ops QoL |
-| [ ] | Low | Simple cash report by day/week | Ops QoL |
-| [x] | — | Card / Stripe | **Out of scope** per UML |
+| [ ] | Moderate | Manual refund status | |
+| [ ] | Moderate | Unpaid filter / badge | |
+| [ ] | Low | Cash report by day/week | |
+| [x] | — | Card / Stripe | **Out of scope** |
 
 ---
 
-## 11. UX / QoL proposals (not all in UML)
+## 11. UX / QoL
 
 | Done | Priority | Task | Why |
 | --- | --- | --- | --- |
-| [ ] | High | Empty states with clear CTAs | “No appointments yet — Book now” |
-| [ ] | High | Toast / inline success & error feedback on all actions | Trust |
-| [ ] | High | Status badges + human-readable labels | PENDING ≠ jargon for customers |
-| [ ] | High | Responsive nav: customer / admin / cleaner shells | Role clarity |
-| [ ] | Moderate | Appointment status timeline component | Reduces “what’s next?” support |
-| [ ] | Moderate | Confirm dialogs for cancel / reject / mark paid | Prevent mistakes |
-| [ ] | Moderate | Skeleton loaders on lists | Perceived performance |
-| [ ] | Moderate | i18n-ready strings (even if English-only first) | Profile has preferredLanguage |
-| [ ] | Moderate | Accessibility: focus states, labels, contrast | Baseline quality |
-| [ ] | Moderate | Public tracking page (token link, no login) | Share status with family |
-| [ ] | Low | Dark mode toggle | Preference |
-| [ ] | Low | Keyboard shortcuts on admin inbox | Power users |
-| [ ] | Low | “Copy booking summary” to clipboard | Phone/WhatsApp handoff |
-| [ ] | Low | Onboarding checklist for first admin setup | Services → slots → test book |
-| [ ] | Low | Favicon + OG meta + basic SEO for landing | Marketing |
+| [x] | High | Empty states with clear CTAs | |
+| [~] | High | Inline success & error feedback | Forms / alerts |
+| [x] | High | Status badges + human-readable labels | |
+| [x] | High | Responsive nav shells | Customer + admin |
+| [ ] | Moderate | Appointment status timeline | |
+| [x] | Moderate | Confirm dialogs for cancel / reject | |
+| [ ] | Moderate | Skeleton loaders | |
+| [ ] | Moderate | i18n-ready strings | |
+| [ ] | Moderate | Accessibility pass | |
+| [ ] | Moderate | Public tracking page | |
+| [x] | Low | Dark branded theme | Master-Gold |
+| [ ] | Low | Keyboard shortcuts on admin inbox | |
+| [ ] | Low | Copy booking summary | |
+| [ ] | Low | Onboarding checklist for first admin | |
+| [ ] | Low | Favicon + OG meta | |
 
 ---
 
@@ -259,27 +246,25 @@ Source: [`docs/uml/03-sequences.md`](./docs/uml/03-sequences.md) — calendar se
 
 | Done | Priority | Task | Notes |
 | --- | --- | --- | --- |
-| [x] | High | GitHub Actions CI (lint, typecheck, build) | Exists |
-| [ ] | Critical | Integration tests for appointment state transitions | Prevent illegal jumps |
-| [ ] | High | Tests for booking capacity race / cancel frees slot | Critical path |
-| [ ] | High | Authorize every action server-side (never UI-only) | IDOR protection |
-| [ ] | High | Rate-limit auth + booking endpoints (middleware/edge) | Abuse |
-| [ ] | Moderate | Structured logging for JobLog + failed emails | Ops |
-| [ ] | Moderate | Staging env + seed data | Deploy QoL |
-| [ ] | Moderate | Vercel env checklist in README | Already partially documented |
-| [ ] | Low | E2E smoke (Playwright): register → book → approve | Confidence |
-| [ ] | Low | Error monitoring (Sentry) | Production |
+| [x] | High | GitHub Actions CI (lint, typecheck, build) | |
+| [ ] | Critical | Integration tests for appointment transitions | |
+| [ ] | High | Tests for booking race / cancel frees slot | |
+| [x] | High | Authorize actions server-side | Guards on mutations |
+| [ ] | High | Rate-limit auth + booking | |
+| [ ] | Moderate | Structured logging | |
+| [ ] | Moderate | Staging env + seed data | |
+| [x] | Moderate | README env / wipe / script docs | Updated |
+| [ ] | Low | E2E smoke (Playwright) | |
+| [ ] | Low | Error monitoring (Sentry) | |
 
 ---
 
 ## 13. Future (after solid single-shop MVP)
 
-From UML backlog + marketplace package — **do not start until MVP works**.
-
 | Done | Priority | Task |
 | --- | --- | --- |
 | [ ] | Future | Before/after photos on completion |
-| [ ] | Future | Customer reviews/ratings |
+| [x] | Future | Customer reviews/ratings | **Moved into MVP — shipped** |
 | [ ] | Future | Recurring appointments |
 | [ ] | Future | Service area / travel radius |
 | [ ] | Future | No-show status + customer flag |
@@ -291,15 +276,15 @@ From UML backlog + marketplace package — **do not start until MVP works**.
 
 ## Suggested build order (MVP path)
 
-1. ~~**Schema + migrations + marketplace scaffold**~~ ✅  
-2. **Guards + route shells** — `/admin`, role redirects, promote an admin user  
-3. **Services + calendar UI** — admin defines what & when  
-4. **Booking wizard** — customer creates PENDING + notify admin (email/SMS)  
-5. **Admin approve** — APPROVED + notify client (email/SMS)  
-6. **Complete service** — status → COMPLETED on site + client visibility  
-7. **Reviews** — client rates completed job  
-8. **UX polish + tests** → near deployment  
-9. **Future** — cleaner board, cash reports, marketplace activation  
+1. ~~Schema + migrations + marketplace scaffold~~ ✅  
+2. ~~Guards + route shells~~ ✅  
+3. ~~Services + calendar UI~~ ✅ (admin catalog CRUD still open)  
+4. ~~Booking wizard + notify~~ ✅  
+5. ~~Admin approve / reject~~ ✅  
+6. ~~Complete + reviews~~ ✅  
+7. ~~Customer cancel~~ ✅  
+8. **UX polish + tests + cash PAID UI** → near deployment  
+9. **Future** — cleaner board, marketplace activation  
 
 ---
 

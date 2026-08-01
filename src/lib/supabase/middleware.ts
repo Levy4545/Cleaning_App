@@ -3,6 +3,12 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { env } from "@/env";
 
+/**
+ * Synchronizes the Supabase session and redirects requests based on authentication state and pathname.
+ *
+ * @param request - The incoming Next.js request.
+ * @returns A response that preserves refreshed session cookies or redirects to the appropriate route.
+ */
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -36,10 +42,6 @@ export async function updateSession(request: NextRequest) {
   } = await supabase.auth.getUser();
 
   const { pathname } = request.nextUrl;
-  const isAuthRoute =
-    pathname.startsWith("/login") ||
-    pathname.startsWith("/register") ||
-    pathname.startsWith("/auth");
   const isProtectedRoute =
     pathname.startsWith("/dashboard") ||
     pathname.startsWith("/settings") ||

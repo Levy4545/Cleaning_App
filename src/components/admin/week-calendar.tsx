@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState, useTransition } from "react";
+import { useMemo, useState, useSyncExternalStore, useTransition } from "react";
 import { useRouter } from "next/navigation";
 import { ChevronLeft, ChevronRight, Trash2, X } from "lucide-react";
 
@@ -122,6 +122,12 @@ function hoverClasses(tool: CalendarTool) {
   return "hover:bg-red-500/10";
 }
 
+/**
+ * Displays and manages a weekly availability calendar with booking information.
+ *
+ * @param slots - Availability slots shown in the calendar
+ * @param bookings - Optional bookings associated with the availability slots
+ */
 export function WeekCalendar({
   slots,
   bookings = [],
@@ -136,13 +142,16 @@ export function WeekCalendar({
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  // Client-only so the "now" marker never causes a hydration mismatch.
-  const [now, setNow] = useState<Date | null>(null);
-  useEffect(() => {
-    setNow(new Date());
-    const timer = setInterval(() => setNow(new Date()), 60_000);
-    return () => clearInterval(timer);
-  }, []);
+  // Client-only "now" marker — avoids hydration mismatch and effect setState lint.
+  const nowMs = useSyncExternalStore(
+    (onStoreChange) => {
+      const id = window.setInterval(onStoreChange, 60_000);
+      return () => window.clearInterval(id);
+    },
+    () => Date.now(),
+    () => null,
+  );
+  const now = nowMs == null ? null : new Date(nowMs);
 
   const days = useMemo(
     () => Array.from({ length: 7 }, (_, i) => addDays(weekAnchor, i)),

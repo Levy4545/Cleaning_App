@@ -1,17 +1,18 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { CalendarPlus } from "lucide-react";
 
+import { cancelAppointment } from "@/actions/appointments";
 import { ReviewForm } from "@/components/booking/review-form";
 import { Alert } from "@/components/ui/alert";
-import { ButtonLink } from "@/components/ui/button";
+import { Button, ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StarDisplay } from "@/components/ui/star-rating";
 import { StatusBadge, statusTheme } from "@/components/ui/status-badge";
 import { cn } from "@/lib/utils";
 import { formatDeliveryMode, formatMoney, formatSlotRange } from "@/lib/format";
-import { serviceIcon } from "@/lib/service-icon";
+import { ServiceIcon } from "@/lib/service-icon";
 
 export type AppointmentRow = {
   id: string;
@@ -44,7 +45,14 @@ const FILTERS = [
 ];
 
 const CLOSED_STATUSES = ["REJECTED", "CANCELLED_BY_USER", "CANCELLED_BY_ADMIN"];
+const CANCELLABLE = ["PENDING", "APPROVED"];
 
+/**
+ * Displays bookings with status filters and an empty state when no bookings exist.
+ *
+ * @param rows - The bookings to display and filter.
+ * @returns The rendered booking list or empty state.
+ */
 export function AppointmentList({ rows }: { rows: AppointmentRow[] }) {
   const [filter, setFilter] = useState("ALL");
 
@@ -113,10 +121,30 @@ export function AppointmentList({ rows }: { rows: AppointmentRow[] }) {
   );
 }
 
+/**
+ * Displays an appointment with its service details, status, pricing, review, and available actions.
+ *
+ * @param row - The appointment data to display
+ * @returns The rendered appointment card
+ */
 function AppointmentCard({ row }: { row: AppointmentRow }) {
-  const Icon = serviceIcon(null, row.serviceName);
   const theme = statusTheme(row.status);
   const closed = CLOSED_STATUSES.includes(row.status);
+  const [error, setError] = useState<string | null>(null);
+  const [isPending, startTransition] = useTransition();
+
+  const onCancel = () => {
+    if (!window.confirm("Cancel this booking? The time window will open again.")) {
+      return;
+    }
+    setError(null);
+    startTransition(async () => {
+      const result = await cancelAppointment(row.id);
+      if (result && !result.success) {
+        setError(result.error);
+      }
+    });
+  };
 
   return (
     <li
@@ -130,7 +158,7 @@ function AppointmentCard({ row }: { row: AppointmentRow }) {
       <div className="p-5">
         <div className="flex flex-wrap items-start gap-4">
           <span className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full border border-gold/25 bg-gold/5">
-            <Icon className="h-5 w-5 text-gold" strokeWidth={1.25} />
+            <ServiceIcon serviceName={row.serviceName} className="h-5 w-5 text-gold" strokeWidth={1.25} />
           </span>
 
           <div className="min-w-0 flex-1">
@@ -166,6 +194,21 @@ function AppointmentCard({ row }: { row: AppointmentRow }) {
 
         {row.status === "COMPLETED" && !row.review ? (
           <ReviewForm appointmentId={row.id} />
+        ) : null}
+
+        {CANCELLABLE.includes(row.status) ? (
+          <div className="mt-4 flex flex-wrap items-center gap-3">
+            <Button
+              type="button"
+              variant="danger-outline"
+              size="sm"
+              disabled={isPending}
+              onClick={onCancel}
+            >
+              {isPending ? "Cancelling…" : "Cancel booking"}
+            </Button>
+            {error ? <span className="text-sm text-red-400">{error}</span> : null}
+          </div>
         ) : null}
       </div>
     </li>

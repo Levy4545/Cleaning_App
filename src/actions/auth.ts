@@ -26,8 +26,15 @@ import {
 } from "@/validators/auth";
 import { getDefaultShopId } from "@/lib/tenancy/get-shop";
 import { homePathForRole } from "@/lib/auth/home-path";
+import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { env } from "@/env";
 
+/**
+ * Authenticates a user with email and password and redirects to an appropriate destination.
+ *
+ * @param input - Login credentials and an optional requested redirect path
+ * @returns An unsuccessful action result containing a validation or authentication error
+ */
 export async function signInWithEmail(
   input: LoginInput,
 ): Promise<ActionResult> {
@@ -48,9 +55,16 @@ export async function signInWithEmail(
 
   await syncUserFromAuth();
   const current = await getCurrentUser();
-  redirect(homePathForRole(current?.role ?? "USER"));
+  const roleHome = homePathForRole(current?.role ?? "USER");
+  redirect(safeRedirectPath(parsed.data.redirectTo, roleHome));
 }
 
+/**
+ * Creates an account with email and password authentication, synchronizes the user record, and redirects to the role-specific home page.
+ *
+ * @param input - The registration details, including email, password, and name.
+ * @returns A failure result containing the validation or authentication error; successful registration redirects instead.
+ */
 export async function signUpWithEmail(
   input: RegisterInput,
 ): Promise<ActionResult> {
@@ -141,6 +155,11 @@ export async function updateProfile(input: {
   return { success: true };
 }
 
+/**
+ * Retrieves the authenticated user with database-backed profile and role details.
+ *
+ * @returns The current user, or `null` when no user is authenticated.
+ */
 export async function getCurrentUser(): Promise<AuthUser | null> {
   const supabase = await createClient();
   const {
@@ -172,44 +191,58 @@ export async function getCurrentUser(): Promise<AuthUser | null> {
   }
 }
 
+/**
+ * Synchronizes a user's database record and required account resources.
+ *
+ * @param userId - The authenticated user's identifier
+ * @param email - The user's email address
+ * @param name - The user's display name
+ */
 async function syncUserRecord(userId: string, email: string, name: string) {
+  const normalizedEmail = email.trim().toLowerCase();
   const userById = await findUserById(userId);
 
   if (userById) {
     await updateUser(userId, {
-      email,
+      email: normalizedEmail,
       name,
     });
     await ensureProfile(userId);
     await ensureDefaultCustomerMembership(userId);
-    await maybeBootstrapAdmin(userId, email);
+    await maybeBootstrapAdmin(userId, normalizedEmail);
     return;
   }
 
-  const userByEmail = await findUserByEmail(email);
+  const userByEmail = await findUserByEmail(normalizedEmail);
 
   if (userByEmail) {
-    await updateUserByEmail(email, {
+    await updateUserByEmail(normalizedEmail, {
       id: userId,
       name,
     });
     await ensureProfile(userId);
     await ensureDefaultCustomerMembership(userId);
-    await maybeBootstrapAdmin(userId, email);
+    await maybeBootstrapAdmin(userId, normalizedEmail);
     return;
   }
 
   await createUser({
     id: userId,
-    email,
+    email: normalizedEmail,
     name,
   });
 
   await ensureProfile(userId);
   await ensureDefaultCustomerMembership(userId);
-  await maybeBootstrapAdmin(userId, email);
+  await maybeBootstrapAdmin(userId, normalizedEmail);
 }
 
+/**
+ * Promotes the configured bootstrap account to an administrator and assigns it ownership of the default shop.
+ *
+ * @param userId - The user account to promote
+ * @param email - The user's email address used to identify the bootstrap account
+ */
 async function maybeBootstrapAdmin(userId: string, email: string) {
   const bootstrap = env.ADMIN_BOOTSTRAP_EMAIL?.toLowerCase();
   if (!bootstrap || email.toLowerCase() !== bootstrap) {

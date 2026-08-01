@@ -5,7 +5,7 @@ import { LogoMark } from "@/components/layout/logo";
 import { ButtonLink } from "@/components/ui/button";
 import { getDefaultShopId } from "@/lib/tenancy/get-shop";
 import { listActiveServices } from "@/db/queries/services";
-import { serviceIcon } from "@/lib/service-icon";
+import { ServiceIcon } from "@/lib/service-icon";
 
 type ServiceCard = {
   id: string;
@@ -87,6 +87,11 @@ async function loadServices(): Promise<ServiceCard[]> {
   }
 }
 
+/**
+ * Renders the Master-Gold Cleaning marketing homepage.
+ *
+ * @returns The homepage with service offerings, booking steps, pricing, and navigation
+ */
 export default async function HomePage() {
   const services = await loadServices();
 
@@ -137,31 +142,31 @@ export default async function HomePage() {
           />
 
           <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            {services.slice(0, 4).map((service) => {
-              const Icon = serviceIcon(null, service.name);
-
-              return (
-                <article
-                  key={service.id}
-                  className="edge-gold group relative overflow-hidden rounded-xl border border-line bg-panel p-6 transition-colors hover:border-gold/35"
-                >
-                  <Icon className="h-7 w-7 text-gold" strokeWidth={1.25} />
-                  <h3 className="mt-5 font-display text-xl text-bone">{service.name}</h3>
-                  <p className="mt-2 min-h-10 text-sm leading-relaxed text-ash">
-                    {service.description ?? "Professional deep clean by trained specialists."}
-                  </p>
-                  <div className="mt-5 flex items-end justify-between border-t border-line pt-4">
-                    <span className="inline-flex items-center gap-1.5 text-xs text-faint">
-                      <Clock className="h-3.5 w-3.5" />
-                      {service.durationMinutes} min
-                    </span>
-                    <span className="font-display text-lg text-gold">
-                      From ${service.basePrice}
-                    </span>
-                  </div>
-                </article>
-              );
-            })}
+            {services.slice(0, 4).map((service) => (
+              <article
+                key={service.id}
+                className="edge-gold group relative overflow-hidden rounded-xl border border-line bg-panel p-6 transition-colors hover:border-gold/35"
+              >
+                <ServiceIcon
+                  serviceName={service.name}
+                  className="h-7 w-7 text-gold"
+                  strokeWidth={1.25}
+                />
+                <h3 className="mt-5 font-display text-xl text-bone">{service.name}</h3>
+                <p className="mt-2 min-h-10 text-sm leading-relaxed text-ash">
+                  {service.description ?? "Professional deep clean by trained specialists."}
+                </p>
+                <div className="mt-5 flex items-end justify-between border-t border-line pt-4">
+                  <span className="inline-flex items-center gap-1.5 text-xs text-faint">
+                    <Clock className="h-3.5 w-3.5" />
+                    {service.durationMinutes} min
+                  </span>
+                  <span className="font-display text-lg text-gold">
+                    From ${service.basePrice}
+                  </span>
+                </div>
+              </article>
+            ))}
           </div>
         </section>
 

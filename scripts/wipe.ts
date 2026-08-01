@@ -18,6 +18,7 @@
  *   --keep-email=x     When wiping users, keep this email (repeatable)
  *   --shop=<uuid>      Limit shop-scoped tables to this shop (default: all shops)
  *   --include-shops    With `all`, also delete shops rows (dangerous)
+ *   --allow-remote     Required when DATABASE_URL host is not localhost
  */
 import postgres from "postgres";
 
@@ -58,6 +59,7 @@ type Options = {
   keepEmails: string[];
   shopId: string | null;
   includeShops: boolean;
+  allowRemote: boolean;
 };
 
 function printHelp() {
@@ -82,6 +84,7 @@ Flags:
   --keep-email=addr     Keep this email when wiping users (repeatable)
   --shop=<uuid>         Limit shop-scoped deletes (omit = all shops)
   --include-shops       Also delete shops when using "all"
+  --allow-remote        Required for non-localhost DATABASE_URL hosts
 
 Examples:
   npm run db:wipe -- appointments availability
@@ -91,6 +94,27 @@ Examples:
 `);
 }
 
+/**
+ * Determines whether a database URL points to a local host.
+ *
+ * @param url - The database URL to inspect
+ * @returns `true` if the URL host is `localhost`, `127.0.0.1`, or `::1`, `false` otherwise
+ */
+function isLocalDatabaseHost(url: string) {
+  try {
+    const host = new URL(url).hostname.toLowerCase();
+    return host === "localhost" || host === "127.0.0.1" || host === "::1";
+  } catch {
+    return false;
+  }
+}
+
+/**
+ * Parses command-line arguments into validated wipe options.
+ *
+ * @param argv - Command-line arguments excluding the executable and script path
+ * @returns `"help"` when help is requested or no arguments are provided; otherwise, the parsed wipe options
+ */
 function parseArgs(argv: string[]): Options | "help" {
   if (argv.length === 0 || argv.includes("--help") || argv.includes("-h")) {
     return "help";
@@ -100,6 +124,7 @@ function parseArgs(argv: string[]): Options | "help" {
   let yes = false;
   let keepAdmins = false;
   let includeShops = false;
+  let allowRemote = false;
   let shopId: string | null = null;
   const keepEmails: string[] = [];
 
@@ -114,6 +139,10 @@ function parseArgs(argv: string[]): Options | "help" {
     }
     if (raw === "--include-shops") {
       includeShops = true;
+      continue;
+    }
+    if (raw === "--allow-remote") {
+      allowRemote = true;
       continue;
     }
     if (raw.startsWith("--keep-email=")) {
@@ -151,6 +180,7 @@ function parseArgs(argv: string[]): Options | "help" {
     keepEmails,
     shopId,
     includeShops,
+    allowRemote,
   };
 }
 
@@ -174,6 +204,11 @@ async function count(sql: postgres.Sql, query: string, params: unknown[] = []) {
   return Number(rows[0]?.count ?? 0);
 }
 
+/**
+ * Executes the database wipe command according to the parsed command-line options.
+ *
+ * @throws If `DATABASE_URL` is missing, targets a non-local host without `--allow-remote`, or the wipe operation fails.
+ */
 async function main() {
   const parsed = parseArgs(process.argv.slice(2));
   if (parsed === "help") {
@@ -184,6 +219,18 @@ async function main() {
   const url = process.env.DATABASE_URL;
   if (!url) {
     throw new Error("DATABASE_URL is required");
+  }
+
+  if (!isLocalDatabaseHost(url) && !parsed.allowRemote) {
+    let host = "(unparseable)";
+    try {
+      host = new URL(url).hostname;
+    } catch {
+      // ignore
+    }
+    throw new Error(
+      `Refusing to wipe non-local database host "${host}". Pass --allow-remote if you really mean it.`,
+    );
   }
 
   const sql = postgres(url, { max: 1 });

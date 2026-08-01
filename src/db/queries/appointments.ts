@@ -1,12 +1,16 @@
-import { and, desc, eq, gte, notExists, sql } from "drizzle-orm";
+import { and, desc, eq, gte, inArray, notExists, sql } from "drizzle-orm";
 
 import { db } from "@/db";
 import {
+  addresses,
   appointmentItems,
   appointments,
   availabilitySlots,
   jobLogs,
   payments,
+  reviews,
+  services,
+  users,
   type AppointmentStatus,
   type DeliveryMode,
   type ItemType,
@@ -140,6 +144,11 @@ export async function findSlotById(id: string, shopId: string) {
   return row ?? null;
 }
 
+/**
+ * Lists calendar bookings for a shop across active and completed appointment statuses.
+ *
+ * @returns Appointment records with customer, service, status, delivery, note, and slot timing details, ordered by slot start time.
+ */
 export async function listCalendarBookings(shopId: string) {
   return db
     .select({
@@ -158,7 +167,7 @@ export async function listCalendarBookings(shopId: string) {
     .where(
       and(
         eq(appointments.shopId, shopId),
-        sql`${appointments.status} in ('PENDING','COMPLETED')`,
+        sql`${appointments.status} in ('PENDING','APPROVED','ASSIGNED','IN_PROGRESS','COMPLETED')`,
       ),
     )
     .orderBy(availabilitySlots.startsAt);
@@ -179,6 +188,13 @@ export async function listAppointmentsForCustomer(customerId: string, shopId: st
     .orderBy(desc(appointments.createdAt));
 }
 
+/**
+ * Lists appointments for a shop, optionally filtered by status.
+ *
+ * @param shopId - The shop identifier
+ * @param status - The appointment status used to filter results
+ * @returns The shop's appointments, ordered from newest to oldest
+ */
 export async function listAppointmentsForShop(
   shopId: string,
   status?: AppointmentStatus,
@@ -194,6 +210,77 @@ export async function listAppointmentsForShop(
     .orderBy(desc(appointments.createdAt));
 }
 
+/**
+ * Lists a shop's appointments with customer, service, slot, payment, address, review, and item details.
+ *
+ * @param shopId - The shop whose appointments to retrieve
+ * @returns Appointment records ordered from newest to oldest, each including its associated items
+ */
+export async function listShopAppointmentsInbox(shopId: string) {
+  const rows = await db
+    .select({
+      id: appointments.id,
+      status: appointments.status,
+      deliveryMode: appointments.deliveryMode,
+      notes: appointments.notes,
+      statusNote: appointments.statusNote,
+      createdAt: appointments.createdAt,
+      customerId: appointments.customerId,
+      serviceName: services.name,
+      servicePrice: services.basePrice,
+      customerName: users.name,
+      customerEmail: users.email,
+      customerPhone: users.phone,
+      slotStartsAt: availabilitySlots.startsAt,
+      slotEndsAt: availabilitySlots.endsAt,
+      paymentAmount: payments.amount,
+      paymentStatus: payments.status,
+      addressLine1: addresses.line1,
+      addressCity: addresses.city,
+      addressPostalCode: addresses.postalCode,
+      reviewRating: reviews.rating,
+      reviewComment: reviews.comment,
+      reviewCreatedAt: reviews.createdAt,
+    })
+    .from(appointments)
+    .leftJoin(services, eq(appointments.serviceId, services.id))
+    .leftJoin(users, eq(appointments.customerId, users.id))
+    .leftJoin(availabilitySlots, eq(appointments.slotId, availabilitySlots.id))
+    .leftJoin(payments, eq(payments.appointmentId, appointments.id))
+    .leftJoin(addresses, eq(appointments.addressId, addresses.id))
+    .leftJoin(reviews, eq(reviews.appointmentId, appointments.id))
+    .where(eq(appointments.shopId, shopId))
+    .orderBy(desc(appointments.createdAt));
+
+  const ids = rows.map((row) => row.id);
+  const items =
+    ids.length === 0
+      ? []
+      : await db
+          .select()
+          .from(appointmentItems)
+          .where(inArray(appointmentItems.appointmentId, ids));
+
+  const itemsByAppointment = new Map<string, typeof items>();
+  for (const item of items) {
+    const list = itemsByAppointment.get(item.appointmentId) ?? [];
+    list.push(item);
+    itemsByAppointment.set(item.appointmentId, list);
+  }
+
+  return rows.map((row) => ({
+    ...row,
+    items: itemsByAppointment.get(row.id) ?? [],
+  }));
+}
+
+/**
+ * Finds an appointment belonging to a shop by its identifier.
+ *
+ * @param id - The appointment identifier
+ * @param shopId - The shop identifier
+ * @returns The matching appointment, or `null` if none exists
+ */
 export async function findAppointmentById(id: string, shopId: string) {
   const [row] = await db
     .select()
@@ -219,12 +306,27 @@ export async function findPaymentForAppointment(appointmentId: string, shopId: s
   return row ?? null;
 }
 
+/**
+ * Creates a pending appointment and reserves its availability slot.
+ *
+ * A provided one-off address is stored for the booking without changing the customer's default address.
+ *
+ * @param input - Booking details, including the shop, customer, service, slot, payment amount, and appointment items
+ * @returns The newly created pending appointment
+ * @throws Error if the selected slot is unavailable, already booked, or the appointment cannot be created
+ */
 export async function createBooking(input: {
   shopId: string;
   customerId: string;
   serviceId: string;
   slotId: string;
   addressId?: string | null;
+  address?: {
+    line1: string;
+    city: string;
+    postalCode?: string;
+    label?: string;
+  } | null;
   deliveryMode: DeliveryMode;
   notes?: string;
   amount: string;
@@ -267,6 +369,24 @@ export async function createBooking(input: {
       throw new Error("This time window was just booked by someone else. Pick another slot.");
     }
 
+    let addressId = input.addressId ?? null;
+    if (input.address) {
+      // One-off booking address — do not flip the customer's default address.
+      const [address] = await tx
+        .insert(addresses)
+        .values({
+          userId: input.customerId,
+          shopId: input.shopId,
+          line1: input.address.line1,
+          city: input.address.city,
+          postalCode: input.address.postalCode,
+          label: input.address.label ?? "Booking address",
+          isDefault: false,
+        })
+        .returning();
+      addressId = address?.id ?? null;
+    }
+
     const [appointment] = await tx
       .insert(appointments)
       .values({
@@ -274,7 +394,7 @@ export async function createBooking(input: {
         customerId: input.customerId,
         serviceId: input.serviceId,
         slotId: input.slotId,
-        addressId: input.addressId ?? null,
+        addressId,
         deliveryMode: input.deliveryMode,
         notes: input.notes,
         status: "PENDING",
