@@ -1,12 +1,18 @@
 "use server";
 
-import { and } from "drizzle-orm";
 import { redirect } from "next/navigation";
 
 import { createClient } from "@/lib/supabase/server";
-import { findUserById, findUserByEmail, createUser, updateUser, updateUserByEmail, } from "@/db/queries/users";
+import {
+  findUserById,
+  findUserByEmail,
+  createUser,
+  updateUser,
+  updateUserByEmail,
+} from "@/db/queries/users";
 import { ensureProfile } from "@/db/queries/profiles";
-import type { ActionResult } from "@/types";
+import { ensureShopMembership } from "@/db/queries/shop-members";
+import type { ActionResult, AuthUser } from "@/types";
 import {
   loginSchema,
   registerSchema,
@@ -15,7 +21,7 @@ import {
   type RegisterInput,
   type ResetPasswordInput,
 } from "@/validators/auth";
-
+import { getDefaultShopId } from "@/lib/tenancy/get-shop";
 export async function signInWithEmail(
   input: LoginInput,
 ): Promise<ActionResult> {
@@ -93,7 +99,7 @@ export async function resetPassword(
   return { success: true };
 }
 
-export async function getCurrentUser() {
+export async function getCurrentUser(): Promise<AuthUser | null> {
   const supabase = await createClient();
   const {
     data: { user },
@@ -110,6 +116,7 @@ export async function getCurrentUser() {
       id: user.id,
       email: user.email ?? record?.email ?? "",
       name: record?.name ?? (user.user_metadata?.name as string | undefined) ?? null,
+      phone: record?.phone ?? null,
       role: record?.role ?? "USER",
     };
   } catch {
@@ -117,13 +124,13 @@ export async function getCurrentUser() {
       id: user.id,
       email: user.email ?? "",
       name: (user.user_metadata?.name as string | undefined) ?? null,
+      phone: null,
       role: "USER",
     };
   }
 }
 
 async function syncUserRecord(userId: string, email: string, name: string) {
-  // 1. Look for an existing user by Supabase ID
   const userById = await findUserById(userId);
 
   if (userById) {
@@ -131,12 +138,11 @@ async function syncUserRecord(userId: string, email: string, name: string) {
       email,
       name,
     });
-
     await ensureProfile(userId);
+    await ensureDefaultCustomerMembership(userId);
     return;
   }
 
-  // 2. Look for an existing user by email
   const userByEmail = await findUserByEmail(email);
 
   if (userByEmail) {
@@ -144,12 +150,11 @@ async function syncUserRecord(userId: string, email: string, name: string) {
       id: userId,
       name,
     });
-
     await ensureProfile(userId);
+    await ensureDefaultCustomerMembership(userId);
     return;
   }
 
-// 3. First login → create everything
   await createUser({
     id: userId,
     email,
@@ -157,6 +162,20 @@ async function syncUserRecord(userId: string, email: string, name: string) {
   });
 
   await ensureProfile(userId);
+  await ensureDefaultCustomerMembership(userId);
+}
+
+async function ensureDefaultCustomerMembership(userId: string) {
+  try {
+    const shopId = await getDefaultShopId();
+    await ensureShopMembership({
+      shopId,
+      userId,
+      role: "CUSTOMER",
+    });
+  } catch {
+    // Shop may not be seeded yet during early setup — safe to ignore.
+  }
 }
 
 

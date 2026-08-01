@@ -21,3 +21,13 @@ export async function requireAdmin() {
 
   return user;
 }
+
+export async function requireCleaner() {
+  const user = await requireUser();
+
+  if (user.role !== "CLEANER" && user.role !== "ADMIN") {
+    redirect("/dashboard");
+  }
+
+  return user;
+}

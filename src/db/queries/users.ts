@@ -1,38 +1,34 @@
 import { eq } from "drizzle-orm";
 
 import { db } from "@/db";
-import { users } from "@/db/schema";
+import { users, type UserRole } from "@/db/schema";
 
 export async function findUserById(id: string) {
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.id, id))
-    .limit(1);
-
+  const [user] = await db.select().from(users).where(eq(users.id, id)).limit(1);
   return user ?? null;
 }
 
 export async function findUserByEmail(email: string) {
-  const [user] = await db
-    .select()
-    .from(users)
-    .where(eq(users.email, email))
-    .limit(1);
-
+  const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
   return user ?? null;
+}
+
+export async function listUsersByRole(role: UserRole) {
+  return db.select().from(users).where(eq(users.role, role));
 }
 
 export async function createUser(data: {
   id: string;
   email: string;
   name: string;
-  role?: "USER" | "ADMIN";
+  phone?: string;
+  role?: UserRole;
 }) {
   await db.insert(users).values({
     id: data.id,
     email: data.email,
     name: data.name,
+    phone: data.phone,
     role: data.role ?? "USER",
   });
 }
@@ -42,6 +38,7 @@ export async function updateUser(
   data: {
     email?: string;
     name?: string;
+    phone?: string;
   },
 ) {
   await db
@@ -53,10 +50,7 @@ export async function updateUser(
     .where(eq(users.id, id));
 }
 
-export async function updateUserRole(
-  id: string,
-  role: "USER" | "ADMIN",
-) {
+export async function updateUserRole(id: string, role: UserRole) {
   await db
     .update(users)
     .set({
@@ -71,6 +65,7 @@ export async function updateUserByEmail(
   data: {
     id?: string;
     name?: string;
+    phone?: string;
   },
 ) {
   await db

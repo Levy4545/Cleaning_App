@@ -22,6 +22,7 @@ export function useUser() {
           id: authUser.id,
           email: authUser.email ?? "",
           name: (authUser.user_metadata?.name as string | undefined) ?? null,
+          role: "USER",
         });
       } else {
         setUser(null);
@@ -40,6 +41,7 @@ export function useUser() {
           id: authUser.id,
           email: authUser.email ?? "",
           name: (authUser.user_metadata?.name as string | undefined) ?? null,
+          role: "USER",
         });
       } else {
         setUser(null);
