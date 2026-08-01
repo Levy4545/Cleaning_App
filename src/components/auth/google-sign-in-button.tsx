@@ -12,6 +12,9 @@ type GoogleSignInButtonProps = {
   redirectTo?: string;
 };
 
+/**
+ * Renders the Google brand icon.
+ */
 function GoogleIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
@@ -35,6 +38,12 @@ function GoogleIcon() {
   );
 }
 
+/**
+ * Renders a button that initiates Google sign-in.
+ *
+ * @param redirectTo - Optional destination to navigate to after authentication
+ * @returns The Google sign-in button and any authentication error message
+ */
 export function GoogleSignInButton({ redirectTo }: GoogleSignInButtonProps) {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

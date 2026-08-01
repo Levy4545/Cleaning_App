@@ -122,6 +122,12 @@ function hoverClasses(tool: CalendarTool) {
   return "hover:bg-red-500/10";
 }
 
+/**
+ * Displays and manages a weekly availability calendar with booking information.
+ *
+ * @param slots - Availability slots shown in the calendar
+ * @param bookings - Optional bookings associated with the availability slots
+ */
 export function WeekCalendar({
   slots,
   bookings = [],

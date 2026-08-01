@@ -17,6 +17,11 @@ import { formatMoney, formatSlotRange } from "@/lib/format";
 
 const OPEN_STATUSES = ["PENDING", "APPROVED", "ASSIGNED", "IN_PROGRESS"];
 
+/**
+ * Renders the authenticated customer's dashboard with appointment summaries, spending, upcoming bookings, available services, and recent activity.
+ *
+ * @returns The customer dashboard view.
+ */
 export default async function DashboardPage() {
   await syncUserFromAuth();
   const user = await requireUser();
@@ -177,6 +182,14 @@ export default async function DashboardPage() {
   );
 }
 
+/**
+ * Displays the next appointment's service, delivery mode, time window, and status.
+ *
+ * @param serviceName - The appointment's service name.
+ * @param deliveryMode - The appointment's delivery mode.
+ * @param status - The appointment's current status.
+ * @param window - The appointment's scheduled time window.
+ */
 function NextAppointment({
   serviceName,
   deliveryMode,

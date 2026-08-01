@@ -3,6 +3,12 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { env } from "@/env";
 
+/**
+ * Synchronizes the Supabase session and redirects requests based on authentication state and pathname.
+ *
+ * @param request - The incoming Next.js request.
+ * @returns A response that preserves refreshed session cookies or redirects to the appropriate route.
+ */
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,

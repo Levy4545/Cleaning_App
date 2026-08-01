@@ -68,6 +68,15 @@ async function notifyAdmins(shopId: string, subject: string, body: string) {
   );
 }
 
+/**
+ * Creates an appointment booking for the authenticated user.
+ *
+ * Validates the selected service and delivery mode, and requires an address for
+ * on-site bookings.
+ *
+ * @param input - The requested service, time slot, delivery mode, and booking details
+ * @returns The created appointment ID or an error result
+ */
 export async function bookAppointment(
   input: CreateBookingInput,
 ): Promise<ActionResult<{ appointmentId: string }>> {
@@ -196,6 +205,12 @@ export async function approveAppointment(
   }
 }
 
+/**
+ * Rejects an appointment and notifies the customer of the rejection reason.
+ *
+ * @param input - The appointment identifier and rejection reason.
+ * @returns An action result indicating whether the appointment was rejected, with an error message when unsuccessful.
+ */
 export async function rejectAppointment(
   input: RejectAppointmentInput,
 ): Promise<ActionResult> {
@@ -240,6 +255,11 @@ export async function rejectAppointment(
   }
 }
 
+/**
+ * Cancels the authenticated customer's pending or approved appointment.
+ *
+ * @returns A success result when the appointment is cancelled, or an error result when it cannot be cancelled.
+ */
 export async function cancelAppointment(appointmentId: string): Promise<ActionResult> {
   const user = await requireUser();
   const shopId = await getDefaultShopId();
@@ -283,6 +303,12 @@ export async function cancelAppointment(appointmentId: string): Promise<ActionRe
   }
 }
 
+/**
+ * Marks an appointment as completed and notifies the customer that a review is available.
+ *
+ * @param appointmentId - The appointment to complete
+ * @returns A successful result or an error describing why completion failed
+ */
 export async function completeAppointment(appointmentId: string): Promise<ActionResult> {
   const admin = await requireAdmin();
   const shopId = await getDefaultShopId();

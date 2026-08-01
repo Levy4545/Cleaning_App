@@ -31,6 +31,12 @@ function parseRange(startsAt: string, endsAt: string) {
   return { ok: true as const, start, end };
 }
 
+/**
+ * Creates an appointment availability slot for the default shop.
+ *
+ * @param input - The slot details, including its start time, end time, and status.
+ * @returns A successful result containing the created slot ID, or a failure result with an error message.
+ */
 export async function createAvailabilitySlot(
   input: CreateSlotInput,
 ): Promise<ActionResult<{ id: string }>> {
@@ -63,6 +69,12 @@ export async function createAvailabilitySlot(
   return { success: true, data: { id: slot.id } };
 }
 
+/**
+ * Updates the start and end times of an availability slot.
+ *
+ * @param input - The slot identifier and updated time range
+ * @returns A successful result when the slot is updated, or an error result when validation fails or the slot is not found
+ */
 export async function updateAvailabilitySlot(
   input: UpdateSlotInput,
 ): Promise<ActionResult> {

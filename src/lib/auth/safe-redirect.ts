@@ -1,6 +1,9 @@
 /**
- * Allow only same-origin relative paths for post-login redirects.
- * Rejects protocol-relative (`//evil.com`) and absolute URLs.
+ * Validates a redirect target and returns a safe same-origin relative path.
+ *
+ * @param value - The redirect target to validate
+ * @param fallback - The path to return when `value` is missing or unsafe
+ * @returns The trimmed relative path if valid; otherwise, `fallback`
  */
 export function safeRedirectPath(
   value: string | null | undefined,

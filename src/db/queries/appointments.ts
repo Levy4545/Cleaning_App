@@ -144,6 +144,11 @@ export async function findSlotById(id: string, shopId: string) {
   return row ?? null;
 }
 
+/**
+ * Lists calendar bookings for a shop across active and completed appointment statuses.
+ *
+ * @returns Appointment records with customer, service, status, delivery, note, and slot timing details, ordered by slot start time.
+ */
 export async function listCalendarBookings(shopId: string) {
   return db
     .select({
@@ -183,6 +188,13 @@ export async function listAppointmentsForCustomer(customerId: string, shopId: st
     .orderBy(desc(appointments.createdAt));
 }
 
+/**
+ * Lists appointments for a shop, optionally filtered by status.
+ *
+ * @param shopId - The shop identifier
+ * @param status - The appointment status used to filter results
+ * @returns The shop's appointments, ordered from newest to oldest
+ */
 export async function listAppointmentsForShop(
   shopId: string,
   status?: AppointmentStatus,
@@ -198,7 +210,12 @@ export async function listAppointmentsForShop(
     .orderBy(desc(appointments.createdAt));
 }
 
-/** Single-query inbox payload + one batched items query (avoids N×7). */
+/**
+ * Lists a shop's appointments with customer, service, slot, payment, address, review, and item details.
+ *
+ * @param shopId - The shop whose appointments to retrieve
+ * @returns Appointment records ordered from newest to oldest, each including its associated items
+ */
 export async function listShopAppointmentsInbox(shopId: string) {
   const rows = await db
     .select({
@@ -257,6 +274,13 @@ export async function listShopAppointmentsInbox(shopId: string) {
   }));
 }
 
+/**
+ * Finds an appointment belonging to a shop by its identifier.
+ *
+ * @param id - The appointment identifier
+ * @param shopId - The shop identifier
+ * @returns The matching appointment, or `null` if none exists
+ */
 export async function findAppointmentById(id: string, shopId: string) {
   const [row] = await db
     .select()
@@ -282,6 +306,15 @@ export async function findPaymentForAppointment(appointmentId: string, shopId: s
   return row ?? null;
 }
 
+/**
+ * Creates a pending appointment and reserves its availability slot.
+ *
+ * A provided one-off address is stored for the booking without changing the customer's default address.
+ *
+ * @param input - Booking details, including the shop, customer, service, slot, payment amount, and appointment items
+ * @returns The newly created pending appointment
+ * @throws Error if the selected slot is unavailable, already booked, or the appointment cannot be created
+ */
 export async function createBooking(input: {
   shopId: string;
   customerId: string;

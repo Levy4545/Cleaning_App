@@ -5,6 +5,11 @@ import { homePathForRole } from "@/lib/auth/home-path";
 import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { createClient } from "@/lib/supabase/server";
 
+/**
+ * Handles an authentication callback and redirects the user to the requested or role-based destination.
+ *
+ * @returns A redirect response to the destination after successful authentication, or to the login page with an authentication error.
+ */
 export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");

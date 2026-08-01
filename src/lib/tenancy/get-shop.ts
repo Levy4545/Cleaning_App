@@ -39,8 +39,10 @@ export async function getDefaultShopId(): Promise<string> {
 }
 
 /**
- * Marketplace scaffold: today ignores host and returns the default shop.
- * Later: parse `{slug}.cleaning.com` and look up shops.subdomain.
+ * Resolves a host to the default shop.
+ *
+ * @param _host - The host used for shop resolution.
+ * @returns The default shop.
  */
 export async function resolveShopFromHost(_host: string | null): Promise<Shop> {
   void _host;

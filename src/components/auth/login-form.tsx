@@ -13,6 +13,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PasswordInput } from "@/components/ui/password-input";
 
+/**
+ * Renders a login form with email, password, and Google sign-in options.
+ *
+ * @returns The login form interface.
+ */
 export function LoginForm() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo");

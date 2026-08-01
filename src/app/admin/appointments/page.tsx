@@ -5,6 +5,9 @@ import { getDefaultShopId } from "@/lib/tenancy/get-shop";
 import { listShopAppointmentsInbox } from "@/db/queries/appointments";
 import { formatItemType, formatSlotRange } from "@/lib/format";
 
+/**
+ * Renders the administrator appointments inbox with appointment totals and pending count.
+ */
 export default async function AdminAppointmentsPage() {
   const admin = await requireAdmin();
   const shopId = await getDefaultShopId();

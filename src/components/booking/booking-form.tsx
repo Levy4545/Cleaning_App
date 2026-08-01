@@ -44,11 +44,23 @@ const ITEM_TYPES: { value: ItemType; label: string }[] = [
   { value: "OTHER", label: "Other" },
 ];
 
+/**
+ * Creates a local calendar-day key from an ISO date string.
+ *
+ * @param iso - The ISO date string to convert
+ * @returns A string containing the local year, month index, and day
+ */
 function dayKey(iso: string) {
   const date = new Date(iso);
   return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`;
 }
 
+/**
+ * Selects the initial delivery mode supported by a service.
+ *
+ * @param service - The service whose supported delivery modes are evaluated
+ * @returns `DROP_OFF` when supported, otherwise `ON_SITE` when supported, or `DROP_OFF` when no supported mode is available
+ */
 function initialModeForService(service?: ServiceOption): DeliveryMode {
   const modes = service?.deliveryModes ?? [];
   if (modes.includes("DROP_OFF")) return "DROP_OFF";
@@ -56,6 +68,13 @@ function initialModeForService(service?: ServiceOption): DeliveryMode {
   return "DROP_OFF";
 }
 
+/**
+ * Renders a multi-step form for selecting a service, providing booking details, choosing an available time slot, and submitting an appointment request.
+ *
+ * @param services - Services available for booking
+ * @param slots - Available appointment time slots
+ * @param initialServiceId - Optional service ID to select initially
+ */
 export function BookingForm({
   services,
   slots,

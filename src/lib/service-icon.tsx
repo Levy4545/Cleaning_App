@@ -6,6 +6,13 @@ type ServiceIconProps = LucideProps & {
   serviceName?: string | null;
 };
 
+/**
+ * Resolves the icon for a service based on its item type or name.
+ *
+ * @param itemType - The service item type used for exact icon selection
+ * @param serviceName - The service name used for keyword-based icon selection
+ * @returns The icon component matching the service, or `Sparkles` when no match is found
+ */
 function resolveIcon(itemType?: string | null, serviceName?: string | null) {
   if (itemType === "CAR") return Car;
   if (itemType === "CARPET") return Layers;
@@ -22,12 +29,16 @@ function resolveIcon(itemType?: string | null, serviceName?: string | null) {
   return Sparkles;
 }
 
-/** Stable service icon element (avoids dynamic component types in render). */
+/**
+ * Renders an icon for the specified service.
+ *
+ * @returns The resolved service icon element.
+ */
 export function ServiceIcon({ itemType, serviceName, ...props }: ServiceIconProps) {
   return createElement(resolveIcon(itemType, serviceName), props);
 }
 
-/** @deprecated Prefer `<ServiceIcon />`. */
+/** @deprecated Prefer `<ServiceIcon />`. Resolves the icon component for the specified item type or service name. */
 export function serviceIcon(itemType?: string | null, serviceName?: string | null) {
   return resolveIcon(itemType, serviceName);
 }

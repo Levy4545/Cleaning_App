@@ -87,6 +87,11 @@ async function loadServices(): Promise<ServiceCard[]> {
   }
 }
 
+/**
+ * Renders the Master-Gold Cleaning marketing homepage.
+ *
+ * @returns The homepage with service offerings, booking steps, pricing, and navigation
+ */
 export default async function HomePage() {
   const services = await loadServices();
 

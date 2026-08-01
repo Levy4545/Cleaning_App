@@ -94,6 +94,12 @@ Examples:
 `);
 }
 
+/**
+ * Determines whether a database URL points to a local host.
+ *
+ * @param url - The database URL to inspect
+ * @returns `true` if the URL host is `localhost`, `127.0.0.1`, or `::1`, `false` otherwise
+ */
 function isLocalDatabaseHost(url: string) {
   try {
     const host = new URL(url).hostname.toLowerCase();
@@ -103,6 +109,12 @@ function isLocalDatabaseHost(url: string) {
   }
 }
 
+/**
+ * Parses command-line arguments into validated wipe options.
+ *
+ * @param argv - Command-line arguments excluding the executable and script path
+ * @returns `"help"` when help is requested or no arguments are provided; otherwise, the parsed wipe options
+ */
 function parseArgs(argv: string[]): Options | "help" {
   if (argv.length === 0 || argv.includes("--help") || argv.includes("-h")) {
     return "help";
@@ -192,6 +204,11 @@ async function count(sql: postgres.Sql, query: string, params: unknown[] = []) {
   return Number(rows[0]?.count ?? 0);
 }
 
+/**
+ * Executes the database wipe command according to the parsed command-line options.
+ *
+ * @throws If `DATABASE_URL` is missing, targets a non-local host without `--allow-remote`, or the wipe operation fails.
+ */
 async function main() {
   const parsed = parseArgs(process.argv.slice(2));
   if (parsed === "help") {

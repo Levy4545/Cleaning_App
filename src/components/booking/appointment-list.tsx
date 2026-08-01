@@ -47,6 +47,12 @@ const FILTERS = [
 const CLOSED_STATUSES = ["REJECTED", "CANCELLED_BY_USER", "CANCELLED_BY_ADMIN"];
 const CANCELLABLE = ["PENDING", "APPROVED"];
 
+/**
+ * Displays bookings with status filters and an empty state when no bookings exist.
+ *
+ * @param rows - The bookings to display and filter.
+ * @returns The rendered booking list or empty state.
+ */
 export function AppointmentList({ rows }: { rows: AppointmentRow[] }) {
   const [filter, setFilter] = useState("ALL");
 
@@ -115,6 +121,12 @@ export function AppointmentList({ rows }: { rows: AppointmentRow[] }) {
   );
 }
 
+/**
+ * Displays an appointment with its service details, status, pricing, review, and available actions.
+ *
+ * @param row - The appointment data to display
+ * @returns The rendered appointment card
+ */
 function AppointmentCard({ row }: { row: AppointmentRow }) {
   const theme = statusTheme(row.status);
   const closed = CLOSED_STATUSES.includes(row.status);

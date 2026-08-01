@@ -3,6 +3,12 @@ import { and, asc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { serviceCategories, services } from "@/db/schema";
 
+/**
+ * Lists all active services for a shop in ascending name order.
+ *
+ * @param shopId - The shop identifier
+ * @returns The shop's active services ordered by name
+ */
 export async function listActiveServices(shopId: string) {
   return db
     .select()
@@ -11,6 +17,12 @@ export async function listActiveServices(shopId: string) {
     .orderBy(asc(services.name));
 }
 
+/**
+ * Lists all service categories belonging to a shop.
+ *
+ * @param shopId - The shop identifier
+ * @returns The shop's service categories
+ */
 export async function listCategories(shopId: string) {
   return db.select().from(serviceCategories).where(eq(serviceCategories.shopId, shopId));
 }
