@@ -1,60 +1,64 @@
-# Admin Services Catalog — Changes
+# Changes — Admin catalog, price ranges & service item types
 
-This document summarizes the Admin catalog CRUD feature added in this change set.
+## Latest (this update)
 
-## Idea implemented
+Merged `main` (includes admin calendar infinite-render fix) and shipped three product changes requested next:
 
-**Next Critical MVP item from `Todo.md`:** Admin manage categories & services UI at `/admin/services`.
+### 1. Customer dashboard — no “Total spent”
 
-Previously the catalog only existed via `npm run db:seed`. Admins had no in-app way to add, edit, or deactivate bookable services.
+The customer `/dashboard` no longer shows a Total spent / wallet stat. It keeps **Upcoming** and **Completed** only. Admin revenue on `/admin` is unchanged.
 
-## What changed
+### 2. Per-service item types at booking
 
-### New route
+Each service has an `itemTypeOptions` list configured in the admin catalog.
 
-- **`/admin/services`** — admin-only catalog manager (protected by existing `requireAdmin` + middleware)
-
-### New / updated files
-
-| Path | Change |
+| Seeded service | Item types shown at booking |
 | --- | --- |
-| `src/app/admin/services/page.tsx` | New RSC page: loads all categories + services for the default shop |
-| `src/components/admin/services-catalog.tsx` | New client UI: category sidebar, service list, create/edit drawers, activate/deactivate |
-| `src/actions/services.ts` | New server actions for category + service mutations |
-| `src/validators/services.ts` | New Zod schemas for catalog inputs |
-| `src/db/queries/services.ts` | Extended with list-all, find/update/delete category helpers, update/activate service |
-| `src/lib/slugify.ts` | Shared slug helper for category slugs |
-| `src/components/layout/nav-items.ts` | Added **Services** link to `adminNav` |
-| `README.md` / `Todo.md` | Documented the new route and marked the task done |
+| Car Interior Cleaning | leather, fabric |
+| Couch Cleaning | leather, fabric |
+| Chair Cleaning | leather, fabric |
+| Carpet Cleaning | *(none — field hidden)* |
 
-### Capabilities
+- Admins set options as a comma-separated list when creating/editing a service.
+- Leave blank → the booking wizard hides the item-type field.
+- Selected value is stored on `appointment_items.item_type` as free text (no longer a fixed global enum).
 
-**Categories**
-- Create / edit name + slug (slug auto-generated from name; uniqueness enforced per shop)
-- Delete only when the category has **zero** services (CASCADE would wipe child services)
+### 3. Prices are ranges, not fixed amounts
 
-**Services**
-- Create / edit: category, name, description, delivery modes (`DROP_OFF` / `ON_SITE`), duration, base price, active flag
-- Soft-deactivate / reactivate (`isActive`) — hard delete avoided because appointments FK is `ON DELETE restrict`
-- Inactive services remain visible to admins but stay hidden from `/book` (still filtered by `listActiveServices`)
+`base_price` was replaced with `price_min` / `price_max`.
 
-### Behavior notes
+- Admin catalog: **Price min** + **Price max** (max ≥ min required).
+- Booking, appointments, landing, and admin inbox show ranges via `formatPriceRange` (e.g. `$300.00 – $500.00`).
+- Unpaid payment rows store the **lower bound** until cash PAID tracking lands.
 
-- Mutations call `requireAdmin()` and revalidate `/admin/services`, `/book`, `/dashboard`, and `/`.
-- Empty categories can be removed; categories with services show a disabled delete control with a tooltip.
-- UI matches the existing Master-Gold admin shell (cards, gold primary actions, modal drawers).
+### Schema migration
 
-## How to try it
+`src/db/migrations/0004_service_price_range_item_types.sql`
 
-1. Sign in as an admin (`ADMIN_BOOTSTRAP_EMAIL` or `npm run db:promote-admin -- you@example.com`).
-2. Open [http://localhost:3000/admin/services](http://localhost:3000/admin/services).
-3. Add a category (e.g. “Home”), then add a service under it.
-4. Confirm the new active service appears in the customer `/book` wizard.
-5. Deactivate the service and confirm it disappears from `/book` while remaining listed in the admin catalog.
+- Adds `item_type_options`, `price_min`, `price_max`
+- Backfills seeded Car/Couch/Chair/Carpet defaults
+- Converts `appointment_items.item_type` from enum → nullable text
+- Drops `base_price` and the old `item_type` enum
 
-## Out of scope (still open in Todo)
+Run: `npm run db:migrate`
 
-- Cleaner-facing UI
-- Automated tests
-- Cash PAID admin UI
-- Service images / recurring slots
+---
+
+## Earlier — Admin Services Catalog CRUD
+
+- Route: `/admin/services`
+- Create/edit categories; create/edit/activate services; delete empty categories
+- Admin nav **Services** item
+
+## How to verify
+
+1. Customer dashboard → confirm no “Total spent”.
+2. `/book` → Car shows leather/fabric; Carpet does not show item type; prices show as ranges.
+3. `/admin/services` → edit a service’s item types / price min–max; confirm booking UI updates.
+4. Create a service with blank item types → booking hides the field.
+
+## Quality
+
+- `npx eslint . --ignore-pattern "supabase/**"` — pass  
+- `SKIP_ENV_VALIDATION=true npm run typecheck` — pass  
+- Playwright E2E covering dashboard, car/carpet booking, admin validation, blank item types — pass  

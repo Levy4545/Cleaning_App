@@ -52,10 +52,11 @@ export default async function AdminHomePage() {
     }),
   );
 
+  // Quote ranges — revenue uses the lower bound until cash PAID tracking lands.
   const completedPrices = await Promise.all(
     completed.map(async (appointment) => {
       const service = await findServiceById(appointment.serviceId, shopId);
-      return Number(service?.basePrice ?? 0);
+      return Number(service?.priceMin ?? 0);
     }),
   );
   const revenue = completedPrices.reduce((sum, price) => sum + price, 0);

@@ -13,7 +13,6 @@ import {
   users,
   type AppointmentStatus,
   type DeliveryMode,
-  type ItemType,
 } from "@/db/schema";
 import { assertTransition } from "@/lib/appointments/transitions";
 
@@ -227,7 +226,8 @@ export async function listShopAppointmentsInbox(shopId: string) {
       createdAt: appointments.createdAt,
       customerId: appointments.customerId,
       serviceName: services.name,
-      servicePrice: services.basePrice,
+      servicePriceMin: services.priceMin,
+      servicePriceMax: services.priceMax,
       customerName: users.name,
       customerEmail: users.email,
       customerPhone: users.phone,
@@ -331,7 +331,7 @@ export async function createBooking(input: {
   notes?: string;
   amount: string;
   items: Array<{
-    itemType: ItemType;
+    itemType?: string | null;
     quantity: number;
     details?: Record<string, unknown>;
   }>;

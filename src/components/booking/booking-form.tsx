@@ -13,16 +13,23 @@ import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
-import { formatDeliveryMode, formatMoney, formatTime } from "@/lib/format";
+import {
+  formatDeliveryMode,
+  formatItemType,
+  formatPriceRange,
+  formatTime,
+} from "@/lib/format";
 import { ServiceIcon } from "@/lib/service-icon";
 
 type ServiceOption = {
   id: string;
   name: string;
   description: string | null;
-  basePrice: string;
+  priceMin: string;
+  priceMax: string;
   durationMinutes: number;
   deliveryModes: string[];
+  itemTypeOptions: string[];
 };
 
 type SlotOption = {
@@ -32,17 +39,8 @@ type SlotOption = {
 };
 
 type DeliveryMode = "ON_SITE" | "DROP_OFF";
-type ItemType = "CAR" | "CARPET" | "CHAIR" | "COUCH" | "OTHER";
 
 const STEPS = ["Service", "Details", "Time", "Confirm"];
-
-const ITEM_TYPES: { value: ItemType; label: string }[] = [
-  { value: "CAR", label: "Car" },
-  { value: "CARPET", label: "Carpet" },
-  { value: "CHAIR", label: "Chair" },
-  { value: "COUCH", label: "Couch" },
-  { value: "OTHER", label: "Other" },
-];
 
 /**
  * Creates a local calendar-day key from an ISO date string.
@@ -66,6 +64,10 @@ function initialModeForService(service?: ServiceOption): DeliveryMode {
   if (modes.includes("DROP_OFF")) return "DROP_OFF";
   if (modes.includes("ON_SITE")) return "ON_SITE";
   return "DROP_OFF";
+}
+
+function initialItemTypeForService(service?: ServiceOption): string {
+  return service?.itemTypeOptions[0] ?? "";
 }
 
 /**
@@ -93,7 +95,7 @@ export function BookingForm({
   const [deliveryMode, setDeliveryMode] = useState<DeliveryMode>(() =>
     initialModeForService(initialService),
   );
-  const [itemType, setItemType] = useState<ItemType>("CARPET");
+  const [itemType, setItemType] = useState(() => initialItemTypeForService(initialService));
   const [quantity, setQuantity] = useState(1);
   const [slotId, setSlotId] = useState("");
   const [details, setDetails] = useState("");
@@ -134,12 +136,18 @@ export function BookingForm({
   const selectService = (next: ServiceOption) => {
     setServiceId(next.id);
     setDeliveryMode(initialModeForService(next));
+    setItemType(initialItemTypeForService(next));
   };
+
+  const itemTypeOptions = selectedService?.itemTypeOptions ?? [];
 
   const stepError = (): string | null => {
     if (step === 0 && !serviceId) return "Pick a service to continue.";
     if (step === 1) {
       if (quantity < 1) return "Quantity must be at least 1.";
+      if (itemTypeOptions.length > 0 && !itemType) {
+        return "Pick an item type for this service.";
+      }
       if (deliveryMode === "ON_SITE" && (!addressLine1.trim() || !addressCity.trim())) {
         return "On-site bookings need a street and city.";
       }
@@ -170,7 +178,7 @@ export function BookingForm({
         serviceId,
         slotId,
         preferredDeliveryMode: deliveryMode,
-        itemType,
+        itemType: itemTypeOptions.length > 0 ? itemType : undefined,
         quantity,
         notes: notes || undefined,
         details: details || undefined,
@@ -235,7 +243,8 @@ export function BookingForm({
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-medium text-bone">{service.name}</span>
                         <span className="mt-0.5 block text-xs leading-relaxed text-faint">
-                          {service.durationMinutes} min · {formatMoney(service.basePrice)}
+                          {service.durationMinutes} min ·{" "}
+                          {formatPriceRange(service.priceMin, service.priceMax)}
                         </span>
                       </span>
                       {active ? <Check className="h-4 w-4 shrink-0 text-gold" /> : null}
@@ -272,21 +281,28 @@ export function BookingForm({
                   <p className="text-xs text-faint">The shop confirms this when approving.</p>
                 </div>
 
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="itemType">Item type</Label>
-                    <Select
-                      id="itemType"
-                      value={itemType}
-                      onChange={(e) => setItemType(e.target.value as ItemType)}
-                    >
-                      {ITEM_TYPES.map((item) => (
-                        <option key={item.value} value={item.value}>
-                          {item.label}
-                        </option>
-                      ))}
-                    </Select>
-                  </div>
+                <div
+                  className={cn(
+                    "grid gap-4",
+                    itemTypeOptions.length > 0 ? "sm:grid-cols-2" : "sm:grid-cols-1",
+                  )}
+                >
+                  {itemTypeOptions.length > 0 ? (
+                    <div className="space-y-2">
+                      <Label htmlFor="itemType">Item type</Label>
+                      <Select
+                        id="itemType"
+                        value={itemType}
+                        onChange={(e) => setItemType(e.target.value)}
+                      >
+                        {itemTypeOptions.map((option) => (
+                          <option key={option} value={option}>
+                            {formatItemType(option)}
+                          </option>
+                        ))}
+                      </Select>
+                    </div>
+                  ) : null}
 
                   <div className="space-y-2">
                     <Label htmlFor="quantity">Quantity</Label>
@@ -443,9 +459,21 @@ export function BookingForm({
               <dl className="divide-y divide-line overflow-hidden rounded-xl border border-line">
                 <SummaryRow label="Service" value={selectedService?.name ?? "—"} />
                 <SummaryRow label="Delivery" value={formatDeliveryMode(deliveryMode)} />
+                {itemTypeOptions.length > 0 ? (
+                  <SummaryRow
+                    label="Item type"
+                    value={`${formatItemType(itemType)} × ${quantity}`}
+                  />
+                ) : (
+                  <SummaryRow label="Quantity" value={String(quantity)} />
+                )}
                 <SummaryRow
-                  label="Item"
-                  value={`${ITEM_TYPES.find((i) => i.value === itemType)?.label} × ${quantity}`}
+                  label="Estimate"
+                  value={
+                    selectedService
+                      ? formatPriceRange(selectedService.priceMin, selectedService.priceMax)
+                      : "—"
+                  }
                 />
                 <SummaryRow
                   label="Window"
@@ -505,6 +533,12 @@ export function BookingForm({
           <dl className="mt-4 space-y-3 text-sm">
             <SummaryLine label="Service" value={selectedService?.name ?? "Not selected"} />
             <SummaryLine label="Delivery" value={formatDeliveryMode(deliveryMode)} />
+            {itemTypeOptions.length > 0 ? (
+              <SummaryLine
+                label="Item type"
+                value={itemType ? formatItemType(itemType) : "Not selected"}
+              />
+            ) : null}
             <SummaryLine label="Quantity" value={String(quantity)} />
             <SummaryLine
               label="Window"
@@ -517,12 +551,14 @@ export function BookingForm({
           </dl>
 
           <div className="mt-4 flex items-center justify-between border-t border-line pt-4">
-            <span className="text-sm text-ash">Total</span>
-            <span className="font-display text-2xl text-gold">
-              {formatMoney(selectedService?.basePrice ?? 0)}
+            <span className="text-sm text-ash">Estimate</span>
+            <span className="font-display text-xl text-gold">
+              {selectedService
+                ? formatPriceRange(selectedService.priceMin, selectedService.priceMax)
+                : "—"}
             </span>
           </div>
-          <p className="mt-2 text-xs text-faint">Flat rate per service, paid in cash.</p>
+          <p className="mt-2 text-xs text-faint">Quoted as a range; paid in cash on completion.</p>
         </Card>
       </div>
     </div>

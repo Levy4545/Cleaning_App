@@ -27,7 +27,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { formatDeliveryMode, formatMoney } from "@/lib/format";
+import { formatDeliveryMode, formatItemType, formatPriceRange } from "@/lib/format";
 import { ServiceIcon } from "@/lib/service-icon";
 import { slugify } from "@/lib/slugify";
 import { cn } from "@/lib/utils";
@@ -45,8 +45,10 @@ export type CatalogService = {
   name: string;
   description: string | null;
   deliveryModes: string[];
+  itemTypeOptions: string[];
   durationMinutes: number;
-  basePrice: string;
+  priceMin: string;
+  priceMax: string;
   isActive: boolean;
 };
 
@@ -62,8 +64,10 @@ type ServiceFormState = {
   name: string;
   description: string;
   deliveryModes: DeliveryMode[];
+  itemTypeOptionsText: string;
   durationMinutes: string;
-  basePrice: string;
+  priceMin: string;
+  priceMax: string;
   isActive: boolean;
 };
 
@@ -74,10 +78,19 @@ const emptyServiceForm = (categoryId: string): ServiceFormState => ({
   name: "",
   description: "",
   deliveryModes: ["DROP_OFF"],
+  itemTypeOptionsText: "",
   durationMinutes: "60",
-  basePrice: "0.00",
+  priceMin: "0.00",
+  priceMax: "0.00",
   isActive: true,
 });
+
+function parseItemTypeOptions(value: string): string[] {
+  return value
+    .split(/[,\n]/)
+    .map((part) => part.trim())
+    .filter(Boolean);
+}
 
 /**
  * Admin UI for managing service categories and the bookable catalog.
@@ -173,8 +186,10 @@ export function ServicesCatalog({
       deliveryModes: service.deliveryModes.filter(
         (mode): mode is DeliveryMode => mode === "ON_SITE" || mode === "DROP_OFF",
       ),
+      itemTypeOptionsText: service.itemTypeOptions.join(", "),
       durationMinutes: String(service.durationMinutes),
-      basePrice: service.basePrice,
+      priceMin: service.priceMin,
+      priceMax: service.priceMax,
       isActive: service.isActive,
     });
     setServiceFormOpen(true);
@@ -357,10 +372,14 @@ export function ServicesCatalog({
                         </div>
                         <p className="text-sm text-ash">
                           {categoryNameById.get(service.categoryId) ?? "Uncategorized"} ·{" "}
-                          {service.durationMinutes} min · {formatMoney(service.basePrice)}
+                          {service.durationMinutes} min ·{" "}
+                          {formatPriceRange(service.priceMin, service.priceMax)}
                         </p>
                         <p className="text-xs text-faint">
                           {service.deliveryModes.map(formatDeliveryMode).join(" · ")}
+                          {service.itemTypeOptions.length > 0
+                            ? ` · ${service.itemTypeOptions.map(formatItemType).join(", ")}`
+                            : " · No item types"}
                           {service.description ? ` · ${service.description}` : ""}
                         </p>
                       </div>
@@ -498,8 +517,10 @@ export function ServicesCatalog({
                 name: serviceForm.name,
                 description: serviceForm.description || undefined,
                 deliveryModes: serviceForm.deliveryModes,
+                itemTypeOptions: parseItemTypeOptions(serviceForm.itemTypeOptionsText),
                 durationMinutes: Number(serviceForm.durationMinutes),
-                basePrice: serviceForm.basePrice,
+                priceMin: serviceForm.priceMin,
+                priceMax: serviceForm.priceMax,
                 isActive: serviceForm.isActive,
               };
 
@@ -582,7 +603,25 @@ export function ServicesCatalog({
               </div>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-2">
+            <div className="space-y-2">
+              <Label htmlFor="service-item-types">Item types</Label>
+              <Input
+                id="service-item-types"
+                value={serviceForm.itemTypeOptionsText}
+                onChange={(event) =>
+                  setServiceForm((prev) => ({
+                    ...prev,
+                    itemTypeOptionsText: event.target.value,
+                  }))
+                }
+                placeholder="leather, fabric"
+              />
+              <p className="text-xs text-faint">
+                Comma-separated. Leave blank to hide item type on booking.
+              </p>
+            </div>
+
+            <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
                 <Label htmlFor="service-duration">Duration (minutes)</Label>
                 <Input
@@ -601,15 +640,28 @@ export function ServicesCatalog({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="service-price">Base price</Label>
+                <Label htmlFor="service-price-min">Price min</Label>
                 <Input
-                  id="service-price"
+                  id="service-price-min"
                   inputMode="decimal"
-                  value={serviceForm.basePrice}
+                  value={serviceForm.priceMin}
                   onChange={(event) =>
-                    setServiceForm((prev) => ({ ...prev, basePrice: event.target.value }))
+                    setServiceForm((prev) => ({ ...prev, priceMin: event.target.value }))
                   }
-                  placeholder="80.00"
+                  placeholder="300.00"
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="service-price-max">Price max</Label>
+                <Input
+                  id="service-price-max"
+                  inputMode="decimal"
+                  value={serviceForm.priceMax}
+                  onChange={(event) =>
+                    setServiceForm((prev) => ({ ...prev, priceMax: event.target.value }))
+                  }
+                  placeholder="500.00"
                   required
                 />
               </div>

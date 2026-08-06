@@ -23,8 +23,10 @@ export default async function AdminServicesPage() {
     name: service.name,
     description: service.description,
     deliveryModes: service.deliveryModes,
+    itemTypeOptions: service.itemTypeOptions ?? [],
     durationMinutes: service.durationMinutes,
-    basePrice: service.basePrice,
+    priceMin: service.priceMin,
+    priceMax: service.priceMax,
     isActive: service.isActive,
   }));
 

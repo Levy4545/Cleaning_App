@@ -38,6 +38,8 @@ export type InboxRow = {
   statusNote: string | null;
   address: string | null;
   items: string;
+  /** Human-readable service quote range. */
+  priceLabel: string;
   amount: string;
   paymentStatus: string;
   review: { rating: number; comment: string | null; createdAt: string } | null;
@@ -188,10 +190,13 @@ function InboxDetail({ row }: { row: InboxRow }) {
       <div className="flex flex-wrap items-center gap-4 rounded-lg border border-line bg-surface px-4 py-3">
         <Wallet className="h-5 w-5 text-gold" />
         <div className="min-w-0 flex-1">
-          <p className="text-sm text-bone">Payment amount</p>
-          <p className="text-xs text-faint">Cash, due on completion</p>
+          <p className="text-sm text-bone">Quote range</p>
+          <p className="text-xs text-faint">
+            Cash on completion
+            {row.paymentStatus === "PAID" ? ` · recorded ${formatMoney(row.amount)}` : ""}
+          </p>
         </div>
-        <span className="font-display text-xl text-gold">{formatMoney(row.amount)}</span>
+        <span className="font-display text-xl text-gold">{row.priceLabel}</span>
         <span
           className={cn(
             "rounded-full border px-2.5 py-1 text-xs font-medium",

@@ -9,6 +9,26 @@ export function formatMoney(amount: string | number) {
   return money.format(Number.isFinite(value) ? value : 0);
 }
 
+/**
+ * Formats an inclusive service price range for display.
+ *
+ * @param min - Lower bound of the quote range
+ * @param max - Upper bound of the quote range
+ * @returns A single amount when bounds match, otherwise `"$min – $max"`
+ */
+export function formatPriceRange(min: string | number, max: string | number) {
+  const low = typeof min === "string" ? Number(min) : min;
+  const high = typeof max === "string" ? Number(max) : max;
+  const safeLow = Number.isFinite(low) ? low : 0;
+  const safeHigh = Number.isFinite(high) ? high : safeLow;
+
+  if (safeLow === safeHigh) {
+    return formatMoney(safeLow);
+  }
+
+  return `${formatMoney(safeLow)} – ${formatMoney(safeHigh)}`;
+}
+
 export function formatDay(value: Date | string) {
   return new Date(value).toLocaleDateString(undefined, {
     weekday: "short",
@@ -30,6 +50,12 @@ export function formatDeliveryMode(mode: string) {
   return mode === "ON_SITE" ? "On-site" : "Drop-off";
 }
 
+/** Title-cases a free-text item type option (e.g. leather → Leather). */
 export function formatItemType(itemType: string) {
-  return itemType.charAt(0) + itemType.slice(1).toLowerCase();
+  if (!itemType) return itemType;
+  return itemType
+    .split(/[\s_-]+/)
+    .filter(Boolean)
+    .map((part) => part.charAt(0).toUpperCase() + part.slice(1).toLowerCase())
+    .join(" ");
 }

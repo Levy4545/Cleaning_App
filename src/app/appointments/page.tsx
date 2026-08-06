@@ -27,7 +27,8 @@ export default async function AppointmentsPage() {
       return {
         id: appointment.id,
         serviceName: service?.name ?? "Service",
-        price: service?.basePrice ?? "0",
+        priceMin: service?.priceMin ?? "0",
+        priceMax: service?.priceMax ?? "0",
         status: appointment.status,
         deliveryMode: appointment.deliveryMode,
         createdAt: new Date(appointment.createdAt).toISOString(),

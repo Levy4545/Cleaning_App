@@ -18,7 +18,8 @@ export const createBookingSchema = z.object({
   slotId: z.string().uuid(),
   /** Customer preference — admin confirms/overrides on approve. */
   preferredDeliveryMode: z.enum(["ON_SITE", "DROP_OFF"]).default("DROP_OFF"),
-  itemType: z.enum(["CAR", "CARPET", "CHAIR", "COUCH", "OTHER"]),
+  /** Selected from the service's itemTypeOptions when that list is non-empty. */
+  itemType: z.string().trim().min(1).max(40).optional(),
   quantity: z.coerce.number().int().min(1).max(20).default(1),
   notes: z.string().max(1000).optional(),
   details: z.string().max(2000).optional(),

@@ -100,6 +100,17 @@ export async function bookAppointment(
     return { success: false, error: "Service does not support this delivery mode" };
   }
 
+  const options = service.itemTypeOptions ?? [];
+  const selectedItemType = parsed.data.itemType?.trim().toLowerCase();
+
+  if (options.length > 0) {
+    if (!selectedItemType || !options.map((option) => option.toLowerCase()).includes(selectedItemType)) {
+      return { success: false, error: "Pick a valid item type for this service" };
+    }
+  } else if (selectedItemType) {
+    return { success: false, error: "This service does not use item types" };
+  }
+
   let address:
     | {
         line1: string;
@@ -131,11 +142,12 @@ export async function bookAppointment(
       address,
       deliveryMode: preferredMode,
       notes: parsed.data.notes,
-      amount: service.basePrice,
+      // Cash quote is a range; store the lower bound on the unpaid payment row.
+      amount: service.priceMin,
       actorId: user.id,
       items: [
         {
-          itemType: parsed.data.itemType,
+          itemType: selectedItemType ?? null,
           quantity: parsed.data.quantity,
           details: parsed.data.details ? { note: parsed.data.details } : {},
         },

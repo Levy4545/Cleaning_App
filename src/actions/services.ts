@@ -194,14 +194,20 @@ export async function createCatalogService(
     return { success: false, error: "Category not found" };
   }
 
+  const itemTypeOptions = parsed.data.itemTypeOptions.map((option) =>
+    option.trim().toLowerCase(),
+  );
+
   const service = await createService({
     shopId,
     categoryId: category.id,
     name: parsed.data.name.trim(),
     description: parsed.data.description?.trim() || undefined,
     deliveryModes: parsed.data.deliveryModes,
+    itemTypeOptions,
     durationMinutes: parsed.data.durationMinutes,
-    basePrice: parsed.data.basePrice,
+    priceMin: parsed.data.priceMin,
+    priceMax: parsed.data.priceMax,
     isActive: parsed.data.isActive ?? true,
   });
 
@@ -240,6 +246,10 @@ export async function updateCatalogService(
     return { success: false, error: "Category not found" };
   }
 
+  const itemTypeOptions = parsed.data.itemTypeOptions.map((option) =>
+    option.trim().toLowerCase(),
+  );
+
   const updated = await updateService({
     serviceId: existing.id,
     shopId,
@@ -247,8 +257,10 @@ export async function updateCatalogService(
     name: parsed.data.name.trim(),
     description: parsed.data.description?.trim() || null,
     deliveryModes: parsed.data.deliveryModes,
+    itemTypeOptions,
     durationMinutes: parsed.data.durationMinutes,
-    basePrice: parsed.data.basePrice,
+    priceMin: parsed.data.priceMin,
+    priceMax: parsed.data.priceMax,
     isActive: parsed.data.isActive ?? existing.isActive,
   });
 

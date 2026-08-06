@@ -11,13 +11,14 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { StarDisplay } from "@/components/ui/star-rating";
 import { StatusBadge, statusTheme } from "@/components/ui/status-badge";
 import { cn } from "@/lib/utils";
-import { formatDeliveryMode, formatMoney, formatSlotRange } from "@/lib/format";
+import { formatDeliveryMode, formatPriceRange, formatSlotRange } from "@/lib/format";
 import { ServiceIcon } from "@/lib/service-icon";
 
 export type AppointmentRow = {
   id: string;
   serviceName: string;
-  price: string;
+  priceMin: string;
+  priceMax: string;
   status: string;
   deliveryMode: string;
   createdAt: string;
@@ -173,7 +174,9 @@ function AppointmentCard({ row }: { row: AppointmentRow }) {
 
           <div className="flex flex-col items-end gap-2">
             <StatusBadge status={row.status} />
-            <span className="font-display text-lg text-gold">{formatMoney(row.price)}</span>
+            <span className="font-display text-lg text-gold">
+              {formatPriceRange(row.priceMin, row.priceMax)}
+            </span>
           </div>
         </div>
 
