@@ -5,7 +5,7 @@ import type { AppointmentStatus } from "@/db/schema";
  * Extra UML states remain valid for later (assign cleaner, etc.).
  */
 const ALLOWED: Record<AppointmentStatus, AppointmentStatus[]> = {
-  PENDING: ["APPROVED", "REJECTED", "CANCELLED_BY_USER"],
+  PENDING: ["APPROVED", "REJECTED", "CANCELLED_BY_USER", "CANCELLED_BY_ADMIN"],
   APPROVED: ["ASSIGNED", "COMPLETED", "CANCELLED_BY_ADMIN", "CANCELLED_BY_USER"],
   ASSIGNED: ["IN_PROGRESS", "COMPLETED", "CANCELLED_BY_ADMIN"],
   IN_PROGRESS: ["COMPLETED"],

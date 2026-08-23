@@ -36,6 +36,13 @@
       "when": 1785600000000,
       "tag": "0004_service_price_range_item_types",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "7",
+      "when": 1786029000000,
+      "tag": "0005_notifications_in_app_messages",
+      "breakpoints": true
     }
   ]
 }

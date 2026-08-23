@@ -5,6 +5,7 @@ import { Check, X } from "lucide-react";
 
 import {
   approveAppointment,
+  cancelAppointmentByAdmin,
   completeAppointment,
   rejectAppointment,
 } from "@/actions/appointments";
@@ -111,7 +112,18 @@ export function AppointmentAdminActions({
       ) : null}
 
       {COMPLETABLE.includes(status) ? (
-        <div className="flex justify-end">
+        <div className="flex flex-wrap justify-end gap-2">
+          <Button
+            variant="danger-outline"
+            disabled={isPending}
+            onClick={() => {
+              const reason = window.prompt("Optional note for the customer:") ?? undefined;
+              run(() => cancelAppointmentByAdmin(appointmentId, reason || undefined));
+            }}
+          >
+            <X className="h-4 w-4" />
+            Cancel booking
+          </Button>
           <Button
             variant="success"
             disabled={isPending}

@@ -4,6 +4,7 @@ import { useState, useTransition } from "react";
 import { CalendarPlus } from "lucide-react";
 
 import { cancelAppointment } from "@/actions/appointments";
+import { AppointmentMessageThread } from "@/components/booking/appointment-message-thread";
 import { ReviewForm } from "@/components/booking/review-form";
 import { Alert } from "@/components/ui/alert";
 import { Button, ButtonLink } from "@/components/ui/button";
@@ -180,7 +181,7 @@ function AppointmentCard({ row }: { row: AppointmentRow }) {
           </div>
         </div>
 
-        {row.statusNote && row.status === "REJECTED" ? (
+        {row.statusNote && (row.status === "REJECTED" || row.status === "CANCELLED_BY_ADMIN") ? (
           <Alert className="mt-4" title="Message from the shop">
             {row.statusNote}
           </Alert>
@@ -211,6 +212,12 @@ function AppointmentCard({ row }: { row: AppointmentRow }) {
               {isPending ? "Cancelling…" : "Cancel booking"}
             </Button>
             {error ? <span className="text-sm text-red-400">{error}</span> : null}
+          </div>
+        ) : null}
+
+        {!closed ? (
+          <div className="mt-4">
+            <AppointmentMessageThread appointmentId={row.id} />
           </div>
         ) : null}
       </div>
