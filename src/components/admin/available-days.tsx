@@ -87,7 +87,7 @@ export function AvailableDaysManager({ days }: { days: AvailableDayRow[] }) {
             return (
               <li key={row.id} className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0">
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm text-bone">{formatDay(row.day, locale)}</p>
+                  <p className="text-sm text-bone">{formatDay(`${row.day}T12:00:00`, locale)}</p>
                   <p className={cn("text-xs", open ? "text-emerald-300" : "text-faint")}>
                     {open ? t("admin.markFree") : t("admin.markBusy")}
                   </p>
