@@ -1,6 +1,6 @@
 "use client";
 
-import { ArrowRight, CalendarCheck, Clock, ShieldCheck, Sparkles } from "lucide-react";
+import { ArrowRight, CalendarCheck, CalendarDays, Clock, ShieldCheck, Sparkles } from "lucide-react";
 
 import { SiteHeader } from "@/components/layout/header";
 import { LogoMark } from "@/components/layout/logo";
@@ -16,6 +16,7 @@ export type HomeServiceCard = {
   priceMin: string;
   priceMax: string;
   durationMinutes: number;
+  requiresTimeWindow?: boolean;
 };
 
 export function HomeView({ services }: { services: HomeServiceCard[] }) {
@@ -91,8 +92,17 @@ export function HomeView({ services }: { services: HomeServiceCard[] }) {
                 </p>
                 <div className="mt-5 flex items-end justify-between border-t border-line pt-4">
                   <span className="inline-flex items-center gap-1.5 text-xs text-faint">
-                    <Clock className="h-3.5 w-3.5" />
-                    {t("common.minutes", { n: service.durationMinutes })}
+                    {service.requiresTimeWindow === false ? (
+                      <>
+                        <CalendarDays className="h-3.5 w-3.5" />
+                        {t("common.dayOnly")}
+                      </>
+                    ) : (
+                      <>
+                        <Clock className="h-3.5 w-3.5" />
+                        {t("common.minutes", { n: service.durationMinutes })}
+                      </>
+                    )}
                   </span>
                   <span className="font-display text-lg text-gold">
                     {formatPriceRange(service.priceMin, service.priceMax, locale)}
@@ -151,7 +161,9 @@ export function HomeView({ services }: { services: HomeServiceCard[] }) {
                     {catalogName(service.name, service.id)}
                   </p>
                   <p className="text-xs text-faint">
-                    {t("common.minutesLong", { n: service.durationMinutes })}
+                    {service.requiresTimeWindow === false
+                      ? t("common.dayOnly")
+                      : t("common.minutesLong", { n: service.durationMinutes })}
                   </p>
                 </div>
                 <p className="font-display text-lg text-gold">

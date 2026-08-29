@@ -1,4 +1,5 @@
 import { AppShell } from "@/components/layout/app-shell";
+import { AvailableDaysManager } from "@/components/admin/available-days";
 import {
   ServicesCatalog,
   type CatalogCategory,
@@ -6,6 +7,7 @@ import {
 } from "@/components/admin/services-catalog";
 import { requireAdmin } from "@/lib/auth/guards";
 import { getDefaultShopId } from "@/lib/tenancy/get-shop";
+import { listAvailableDays } from "@/db/queries/available-days";
 import { listAllServices, listCategories, listServiceTranslationsForShop } from "@/db/queries/services";
 import { getTranslator } from "@/i18n/server";
 
@@ -14,10 +16,11 @@ export default async function AdminServicesPage() {
   const shopId = await getDefaultShopId();
   const { t } = await getTranslator();
 
-  const [categoryRows, serviceRows, translationRows] = await Promise.all([
+  const [categoryRows, serviceRows, translationRows, freeDays] = await Promise.all([
     listCategories(shopId),
     listAllServices(shopId),
     listServiceTranslationsForShop(shopId),
+    listAvailableDays(shopId),
   ]);
 
   const translationsByService = new Map<string, { ro?: { name: string; description: string | null }; hu?: { name: string; description: string | null } }>();
@@ -70,7 +73,16 @@ export default async function AdminServicesPage() {
       description={t("admin.servicesBody")}
       descriptionKey="admin.servicesBody"
     >
-      <ServicesCatalog categories={categories} services={services} />
+      <div className="space-y-6">
+        <AvailableDaysManager
+          days={freeDays.map((row) => ({
+            id: row.id,
+            day: row.day,
+            status: row.status,
+          }))}
+        />
+        <ServicesCatalog categories={categories} services={services} />
+      </div>
     </AppShell>
   );
 }

@@ -266,8 +266,10 @@ export function BookingForm({
                           {catalogName(service.name, service.id)}
                         </span>
                         <span className="mt-0.5 block text-xs leading-relaxed text-faint">
-                          {t("common.minutes", { n: service.durationMinutes })} ·{" "}
-                          {formatPriceRange(service.priceMin, service.priceMax, locale)}
+                          {service.requiresTimeWindow === false
+                            ? t("common.dayOnly")
+                            : t("common.minutes", { n: service.durationMinutes })}{" "}
+                          · {formatPriceRange(service.priceMin, service.priceMax, locale)}
                         </span>
                       </span>
                       {active ? <Check className="h-4 w-4 shrink-0 text-gold" /> : null}

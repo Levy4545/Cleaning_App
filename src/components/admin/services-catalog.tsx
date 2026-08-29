@@ -421,17 +421,17 @@ export function ServicesCatalog({
                             t,
                             categoryNameById.get(service.categoryId) ?? t("catalog.uncategorized"),
                           )}{" "}
-                          · {t("common.minutes", { n: service.durationMinutes })} ·{" "}
-                          {formatPriceRange(service.priceMin, service.priceMax, locale)}
+                          ·{" "}
+                          {service.requiresTimeWindow
+                            ? t("common.minutes", { n: service.durationMinutes })
+                            : t("common.dayOnly")}{" "}
+                          · {formatPriceRange(service.priceMin, service.priceMax, locale)}
                         </p>
                         <p className="text-xs text-faint">
                           {service.deliveryModes.map((mode) => formatDeliveryMode(mode, t)).join(" · ")}
                           {service.itemTypeOptions.length > 0
                             ? ` · ${service.itemTypeOptions.map((item) => formatItemType(item, t)).join(", ")}`
                             : ` · ${t("catalog.noItemTypes")}`}
-                          {service.requiresTimeWindow
-                            ? ""
-                            : ` · ${t("common.toBeScheduled")}`}
                           {catalogDescription(service.description, service.id, service.name)
                             ? ` · ${catalogDescription(service.description, service.id, service.name)}`
                             : ""}
@@ -576,7 +576,7 @@ export function ServicesCatalog({
                 descriptionHu: serviceForm.descriptionHu || undefined,
                 deliveryModes: serviceForm.deliveryModes,
                 itemTypeOptions: parseItemTypeOptions(serviceForm.itemTypeOptionsText),
-                durationMinutes: Number(serviceForm.durationMinutes),
+                durationMinutes: Number(serviceForm.durationMinutes) || 60,
                 requiresTimeWindow: serviceForm.requiresTimeWindow,
                 priceMin: serviceForm.priceMin,
                 priceMax: serviceForm.priceMax,
@@ -745,24 +745,49 @@ export function ServicesCatalog({
               <p className="text-xs text-faint">{t("catalog.itemTypesHint")}</p>
             </div>
 
-            <div className="grid gap-4 sm:grid-cols-3">
-              <div className="space-y-2">
-                <Label htmlFor="service-duration">{t("catalog.duration")}</Label>
-                <Input
-                  id="service-duration"
-                  type="number"
-                  min={15}
-                  step={15}
-                  value={serviceForm.durationMinutes}
-                  onChange={(event) =>
-                    setServiceForm((prev) => ({
-                      ...prev,
-                      durationMinutes: event.target.value,
-                    }))
-                  }
-                  required
-                />
-              </div>
+            <label className="flex items-start gap-2 text-sm text-ash">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 rounded border-line bg-surface text-gold focus:ring-gold/40"
+                checked={serviceForm.requiresTimeWindow}
+                onChange={(event) =>
+                  setServiceForm((prev) => ({
+                    ...prev,
+                    requiresTimeWindow: event.target.checked,
+                  }))
+                }
+              />
+              <span>
+                <span className="block text-bone">{t("catalog.requiresTimeWindow")}</span>
+                <span className="block text-xs text-faint">{t("catalog.requiresTimeWindowHint")}</span>
+              </span>
+            </label>
+
+            <div
+              className={cn(
+                "grid gap-4",
+                serviceForm.requiresTimeWindow ? "sm:grid-cols-3" : "sm:grid-cols-2",
+              )}
+            >
+              {serviceForm.requiresTimeWindow ? (
+                <div className="space-y-2">
+                  <Label htmlFor="service-duration">{t("catalog.duration")}</Label>
+                  <Input
+                    id="service-duration"
+                    type="number"
+                    min={15}
+                    step={15}
+                    value={serviceForm.durationMinutes}
+                    onChange={(event) =>
+                      setServiceForm((prev) => ({
+                        ...prev,
+                        durationMinutes: event.target.value,
+                      }))
+                    }
+                    required
+                  />
+                </div>
+              ) : null}
               <div className="space-y-2">
                 <Label htmlFor="service-price-min">{t("catalog.priceMin")}</Label>
                 <Input
@@ -790,24 +815,6 @@ export function ServicesCatalog({
                 />
               </div>
             </div>
-
-            <label className="flex items-start gap-2 text-sm text-ash">
-              <input
-                type="checkbox"
-                className="mt-0.5 h-4 w-4 rounded border-line bg-surface text-gold focus:ring-gold/40"
-                checked={serviceForm.requiresTimeWindow}
-                onChange={(event) =>
-                  setServiceForm((prev) => ({
-                    ...prev,
-                    requiresTimeWindow: event.target.checked,
-                  }))
-                }
-              />
-              <span>
-                <span className="block text-bone">{t("catalog.requiresTimeWindow")}</span>
-                <span className="block text-xs text-faint">{t("catalog.requiresTimeWindowHint")}</span>
-              </span>
-            </label>
 
             <label className="flex items-center gap-2 text-sm text-ash">
               <input

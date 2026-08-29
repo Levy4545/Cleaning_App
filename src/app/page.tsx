@@ -53,6 +53,7 @@ async function loadServices(): Promise<HomeServiceCard[]> {
       priceMin: service.priceMin,
       priceMax: service.priceMax,
       durationMinutes: service.durationMinutes,
+      requiresTimeWindow: service.requiresTimeWindow,
     }));
   } catch {
     return fallbackServices;
