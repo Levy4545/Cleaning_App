@@ -2,7 +2,6 @@
 
 import { revalidatePath } from "next/cache";
 
-import { env } from "@/env";
 import { requireAdmin, requireUser } from "@/lib/auth/guards";
 import { getDefaultShopId } from "@/lib/tenancy/get-shop";
 import {
@@ -11,9 +10,9 @@ import {
   transitionAppointment,
 } from "@/db/queries/appointments";
 import { findServiceById } from "@/db/queries/services";
-import { findUserById, listUsersByRole } from "@/db/queries/users";
-import { createAndSendNotification } from "@/db/queries/notifications";
 import { createReview, findReviewByAppointment } from "@/db/queries/reviews";
+import { notifyAdminsEvent, notifyUserEvent } from "@/lib/notifications/dispatch";
+import { formatDeliveryMode, formatPriceRange } from "@/lib/format";
 import {
   createBookingSchema,
   approveAppointmentSchema,
@@ -25,48 +24,6 @@ import {
   type ReviewInput,
 } from "@/validators/booking";
 import type { ActionResult } from "@/types";
-
-async function notifyUser(input: {
-  shopId: string;
-  userId: string;
-  subject: string;
-  body: string;
-}) {
-  const user = await findUserById(input.userId);
-  if (!user) {
-    return;
-  }
-
-  const channel = env.NOTIFY_CHANNEL;
-  const to = channel === "SMS" ? (user.phone ?? user.email) : user.email;
-
-  if (!to) {
-    return;
-  }
-
-  await createAndSendNotification({
-    shopId: input.shopId,
-    userId: input.userId,
-    channel,
-    to,
-    subject: input.subject,
-    body: input.body,
-  });
-}
-
-async function notifyAdmins(shopId: string, subject: string, body: string) {
-  const admins = await listUsersByRole("ADMIN");
-  await Promise.all(
-    admins.map((admin) =>
-      notifyUser({
-        shopId,
-        userId: admin.id,
-        subject,
-        body,
-      }),
-    ),
-  );
-}
 
 /**
  * Creates an appointment booking for the authenticated user.
@@ -154,16 +111,20 @@ export async function bookAppointment(
       ],
     });
 
-    await notifyAdmins(
-      shopId,
-      "New booking request",
-      `New booking from ${user.email} (preferred: ${preferredMode}). Appointment ID: ${appointment.id}`,
-    );
+    const priceLabel = formatPriceRange(service.priceMin, service.priceMax);
+    await notifyAdminsEvent(shopId, {
+      type: "BOOKING_CREATED",
+      subject: "New booking request",
+      body: `${user.name ?? user.email} requested ${service.name} (${formatDeliveryMode(preferredMode)}).\nQuote range: ${priceLabel}.\nOpen the appointments inbox to approve or reject.`,
+      appointmentId: appointment.id,
+      href: "/admin/appointments",
+    });
 
     revalidatePath("/appointments");
     revalidatePath("/admin/appointments");
     revalidatePath("/book");
     revalidatePath("/admin/calendar");
+    revalidatePath("/notifications");
 
     return { success: true, data: { appointmentId: appointment.id } };
   } catch (error) {
@@ -187,6 +148,17 @@ export async function approveAppointment(
   const shopId = await getDefaultShopId();
 
   try {
+    const existing = await findAppointmentById(parsed.data.appointmentId, shopId);
+    if (!existing) {
+      return { success: false, error: "Appointment not found" };
+    }
+
+    const service = await findServiceById(existing.serviceId, shopId);
+    const priceLabel = formatPriceRange(
+      service?.priceMin ?? "0",
+      service?.priceMax ?? service?.priceMin ?? "0",
+    );
+
     const updated = await transitionAppointment({
       appointmentId: parsed.data.appointmentId,
       shopId,
@@ -197,17 +169,21 @@ export async function approveAppointment(
     });
 
     if (updated) {
-      await notifyUser({
+      await notifyUserEvent({
         shopId,
         userId: updated.customerId,
+        type: "BOOKING_APPROVED",
         subject: "Booking approved",
-        body: `Your cleaning appointment was approved (${parsed.data.deliveryMode.replace("_", "-")}).`,
+        body: `Your ${service?.name ?? "cleaning"} appointment was approved.\n\nDelivery: ${formatDeliveryMode(parsed.data.deliveryMode)}\nPrice: ${priceLabel} (cash on completion)\n\nSee your appointments for details.`,
+        appointmentId: updated.id,
+        href: "/appointments",
       });
     }
 
     revalidatePath("/admin/appointments");
     revalidatePath("/appointments");
     revalidatePath("/admin/calendar");
+    revalidatePath("/notifications");
     return { success: true };
   } catch (error) {
     return {
@@ -246,11 +222,14 @@ export async function rejectAppointment(
     });
 
     if (updated) {
-      await notifyUser({
+      await notifyUserEvent({
         shopId,
         userId: updated.customerId,
-        subject: "Booking rejected",
-        body: `Your cleaning appointment was rejected.\n\nReason: ${parsed.data.reason}`,
+        type: "BOOKING_REJECTED",
+        subject: "Booking cancelled by shop",
+        body: `Your cleaning appointment was not accepted and has been cancelled.\n\nReason: ${parsed.data.reason}`,
+        appointmentId: updated.id,
+        href: "/appointments",
       });
     }
 
@@ -258,6 +237,7 @@ export async function rejectAppointment(
     revalidatePath("/appointments");
     revalidatePath("/book");
     revalidatePath("/admin/calendar");
+    revalidatePath("/notifications");
     return { success: true };
   } catch (error) {
     return {
@@ -286,6 +266,7 @@ export async function cancelAppointment(appointmentId: string): Promise<ActionRe
   }
 
   try {
+    const service = await findServiceById(existing.serviceId, shopId);
     const updated = await transitionAppointment({
       appointmentId,
       shopId,
@@ -295,17 +276,78 @@ export async function cancelAppointment(appointmentId: string): Promise<ActionRe
     });
 
     if (updated) {
-      await notifyAdmins(
-        shopId,
-        "Booking cancelled",
-        `Customer ${user.email} cancelled appointment ${updated.id}.`,
-      );
+      await notifyAdminsEvent(shopId, {
+        type: "BOOKING_CANCELLED",
+        subject: "Booking cancelled by customer",
+        body: `${user.name ?? user.email} cancelled their ${service?.name ?? "cleaning"} booking.`,
+        appointmentId: updated.id,
+        href: "/admin/appointments",
+      });
     }
 
     revalidatePath("/appointments");
     revalidatePath("/admin/appointments");
     revalidatePath("/book");
     revalidatePath("/admin/calendar");
+    revalidatePath("/notifications");
+    return { success: true };
+  } catch (error) {
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : "Could not cancel",
+    };
+  }
+}
+
+/**
+ * Admin cancels a pending/approved booking and notifies the customer.
+ */
+export async function cancelAppointmentByAdmin(
+  appointmentId: string,
+  reason?: string,
+): Promise<ActionResult> {
+  const admin = await requireAdmin();
+  const shopId = await getDefaultShopId();
+
+  const existing = await findAppointmentById(appointmentId, shopId);
+  if (!existing) {
+    return { success: false, error: "Appointment not found" };
+  }
+
+  if (existing.status !== "PENDING" && existing.status !== "APPROVED") {
+    return { success: false, error: "Only pending or approved bookings can be cancelled" };
+  }
+
+  const note = reason?.trim() || "Cancelled by shop";
+
+  try {
+    const service = await findServiceById(existing.serviceId, shopId);
+    const updated = await transitionAppointment({
+      appointmentId,
+      shopId,
+      to: "CANCELLED_BY_ADMIN",
+      actorId: admin.id,
+      note,
+      statusNote: note,
+    });
+
+    if (updated) {
+      await notifyUserEvent({
+        shopId,
+        userId: updated.customerId,
+        type: "BOOKING_CANCELLED",
+        subject: "Booking cancelled",
+        body: `Your ${service?.name ?? "cleaning"} appointment was cancelled by the shop.\n\n${note}`,
+        appointmentId: updated.id,
+        href: "/appointments",
+      });
+    }
+
+    revalidatePath("/admin/appointments");
+    revalidatePath("/appointments");
+    revalidatePath("/book");
+    revalidatePath("/admin/calendar");
+    revalidatePath("/notifications");
     return { success: true };
   } catch (error) {
     return {
@@ -331,6 +373,8 @@ export async function completeAppointment(appointmentId: string): Promise<Action
       return { success: false, error: "Appointment not found" };
     }
 
+    const service = await findServiceById(existing.serviceId, shopId);
+
     // MVP shortcut: allow APPROVED -> COMPLETED (and ASSIGNED/IN_PROGRESS too via helper)
     const updated = await transitionAppointment({
       appointmentId,
@@ -341,17 +385,26 @@ export async function completeAppointment(appointmentId: string): Promise<Action
     });
 
     if (updated) {
-      await notifyUser({
+      const pickupLine =
+        updated.deliveryMode === "DROP_OFF"
+          ? "Your items are ready for pickup at the shop."
+          : "The on-site job is finished.";
+
+      await notifyUserEvent({
         shopId,
         userId: updated.customerId,
-        subject: "Service completed",
-        body: `Your cleaning appointment ${updated.id} is complete. You can leave a review.`,
+        type: "BOOKING_COMPLETED",
+        subject: "Service completed — ready for you",
+        body: `Your ${service?.name ?? "cleaning"} appointment is complete.\n\n${pickupLine}\nYou can leave a review from My appointments.`,
+        appointmentId: updated.id,
+        href: "/appointments",
       });
     }
 
     revalidatePath("/admin/appointments");
     revalidatePath("/appointments");
     revalidatePath("/admin/calendar");
+    revalidatePath("/notifications");
     return { success: true };
   } catch (error) {
     return {

@@ -1,6 +1,8 @@
+import nodemailer from "nodemailer";
+
 import { env } from "@/env";
 
-export type NotifyChannel = "EMAIL" | "SMS";
+export type NotifyChannel = "EMAIL" | "SMS" | "IN_APP";
 
 export type NotifyInput = {
   shopId: string;
@@ -9,6 +11,8 @@ export type NotifyInput = {
   to: string;
   subject?: string;
   body: string;
+  /** Optional HTML for email providers that support it */
+  html?: string;
 };
 
 export type NotifyResult = {
@@ -18,43 +22,118 @@ export type NotifyResult = {
 };
 
 /**
- * Notification facade for MVP.
- * - EMAIL: logs + optional Resend when RESEND_API_KEY is set
- * - SMS: logs + optional Twilio when credentials are set
- * Providers can be swapped without changing booking/approve flows.
+ * Notification delivery facade.
+ *
+ * EMAIL priority:
+ * 1. Company Gmail / Google Workspace via SMTP (GMAIL_USER + GMAIL_APP_PASSWORD)
+ * 2. Resend API (RESEND_API_KEY + NOTIFICATION_EMAIL_FROM)
+ * 3. Console stub (dev-safe when neither is configured)
+ *
+ * SMS: Twilio when credentials are set, otherwise stub.
+ * IN_APP: no external send — persistence is handled by the caller.
  */
 export async function sendNotification(input: NotifyInput): Promise<NotifyResult> {
+  if (input.channel === "IN_APP") {
+    return { ok: true, provider: "in-app" };
+  }
   if (input.channel === "EMAIL") {
     return sendEmail(input);
   }
   return sendSms(input);
 }
 
-async function sendEmail(input: NotifyInput): Promise<NotifyResult> {
-  const apiKey = env.RESEND_API_KEY;
-  const from = env.NOTIFICATION_EMAIL_FROM;
+function fromAddress() {
+  return env.NOTIFICATION_EMAIL_FROM ?? env.GMAIL_USER ?? "noreply@master-gold.local";
+}
 
-  if (!apiKey || !from) {
-    console.info("[notify:email:stub]", {
+async function sendEmail(input: NotifyInput): Promise<NotifyResult> {
+  const subject = input.subject ?? "Master-Gold Cleaning";
+  const html = input.html ?? plainTextToHtml(input.body);
+
+  if (env.GMAIL_USER && env.GMAIL_APP_PASSWORD) {
+    return sendViaGmailSmtp({
       to: input.to,
-      subject: input.subject,
-      body: input.body,
+      subject,
+      text: input.body,
+      html,
     });
-    return { ok: true, provider: "stub-email" };
   }
 
+  if (env.RESEND_API_KEY && env.NOTIFICATION_EMAIL_FROM) {
+    return sendViaResend({
+      to: input.to,
+      subject,
+      text: input.body,
+      html,
+      from: env.NOTIFICATION_EMAIL_FROM,
+      apiKey: env.RESEND_API_KEY,
+    });
+  }
+
+  console.info("[notify:email:stub]", {
+    to: input.to,
+    subject,
+    body: input.body,
+  });
+  return { ok: true, provider: "stub-email" };
+}
+
+async function sendViaGmailSmtp(input: {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+}): Promise<NotifyResult> {
+  try {
+    const transporter = nodemailer.createTransport({
+      host: env.SMTP_HOST ?? "smtp.gmail.com",
+      port: env.SMTP_PORT ?? 465,
+      secure: (env.SMTP_PORT ?? 465) === 465,
+      auth: {
+        user: env.GMAIL_USER!,
+        pass: env.GMAIL_APP_PASSWORD!,
+      },
+    });
+
+    await transporter.sendMail({
+      from: fromAddress(),
+      to: input.to,
+      subject: input.subject,
+      text: input.text,
+      html: input.html,
+    });
+
+    return { ok: true, provider: "gmail-smtp" };
+  } catch (error) {
+    return {
+      ok: false,
+      provider: "gmail-smtp",
+      error: error instanceof Error ? error.message : "Unknown Gmail SMTP error",
+    };
+  }
+}
+
+async function sendViaResend(input: {
+  to: string;
+  subject: string;
+  text: string;
+  html: string;
+  from: string;
+  apiKey: string;
+}): Promise<NotifyResult> {
   try {
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${apiKey}`,
+        Authorization: `Bearer ${input.apiKey}`,
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from,
+        from: input.from,
         to: input.to,
-        subject: input.subject ?? "Master-Gold Cleaning",
-        text: input.body,
+        subject: input.subject,
+        text: input.text,
+        html: input.html,
       }),
     });
 
@@ -116,4 +195,22 @@ async function sendSms(input: NotifyInput): Promise<NotifyResult> {
       error: error instanceof Error ? error.message : "Unknown SMS error",
     };
   }
+}
+
+function plainTextToHtml(body: string) {
+  const escaped = body
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/\n/g, "<br/>");
+
+  return `<!DOCTYPE html>
+<html>
+  <body style="font-family: Georgia, 'Times New Roman', serif; background:#0b0b0b; color:#f5f0e8; padding:24px;">
+    <div style="max-width:560px;margin:0 auto;background:#151515;border:1px solid #2a2a2a;border-radius:12px;padding:28px;">
+      <p style="margin:0 0 8px;color:#c9a227;font-size:12px;letter-spacing:0.12em;text-transform:uppercase;">Master-Gold Cleaning</p>
+      <div style="font-size:15px;line-height:1.6;color:#e8e2d6;">${escaped}</div>
+    </div>
+  </body>
+</html>`;
 }

@@ -15,6 +15,7 @@ import {
 } from "lucide-react";
 
 import { AppointmentAdminActions } from "@/components/admin/appointment-admin-actions";
+import { AppointmentMessageThread } from "@/components/booking/appointment-message-thread";
 import { Avatar } from "@/components/layout/app-sidebar";
 import { Alert } from "@/components/ui/alert";
 import { EmptyState } from "@/components/ui/empty-state";
@@ -242,8 +243,9 @@ function InboxDetail({ row }: { row: InboxRow }) {
         })}
       </ol>
 
-      {row.statusNote && row.status === "REJECTED" ? (
-        <Alert title="Rejection message sent to client">{row.statusNote}</Alert>
+      {row.statusNote &&
+      (row.status === "REJECTED" || row.status === "CANCELLED_BY_ADMIN") ? (
+        <Alert title="Message sent to client">{row.statusNote}</Alert>
       ) : null}
 
       {row.review ? (
@@ -261,6 +263,8 @@ function InboxDetail({ row }: { row: InboxRow }) {
       ) : row.status === "COMPLETED" ? (
         <p className="text-sm text-faint">No review yet.</p>
       ) : null}
+
+      <AppointmentMessageThread appointmentId={row.id} />
 
       <div className="border-t border-line pt-4">
         <AppointmentAdminActions

@@ -133,6 +133,7 @@ export const appointmentsRelations = relations(appointments, ({ one, many }) => 
     fields: [appointments.id],
     references: [reviews.appointmentId],
   }),
+  messages: many(messages),
 }));
 
 export const appointmentItemsRelations = relations(appointmentItems, ({ one }) => ({
@@ -191,6 +192,10 @@ export const notificationsRelations = relations(notifications, ({ one }) => ({
   user: one(users, {
     fields: [notifications.userId],
     references: [users.id],
+  }),
+  appointment: one(appointments, {
+    fields: [notifications.appointmentId],
+    references: [appointments.id],
   }),
 }));
 

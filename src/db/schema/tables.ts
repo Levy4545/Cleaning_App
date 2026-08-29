@@ -295,10 +295,18 @@ export const notifications = pgTable("notifications", {
   userId: uuid("user_id")
     .notNull()
     .references(() => users.id, { onDelete: "cascade" }),
+  appointmentId: uuid("appointment_id").references(() => appointments.id, {
+    onDelete: "set null",
+  }),
+  /** Stable event key, e.g. BOOKING_APPROVED / APPOINTMENT_MESSAGE */
+  type: text("type").notNull().default("GENERAL"),
   channel: notificationChannelEnum("channel").notNull(),
   subject: text("subject"),
   body: text("body").notNull(),
+  /** Deep link inside the app (e.g. /appointments or /admin/appointments) */
+  href: text("href"),
   status: notificationStatusEnum("status").notNull().default("PENDING"),
+  readAt: timestamp("read_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
