@@ -37,6 +37,19 @@ export function translateCatalogName(t: Translator["t"], name: string) {
   return key ? t(key) : name;
 }
 
+const CATALOG_DESCRIPTION_KEYS: Record<string, Parameters<Translator["t"]>[0]> = {
+  "vacuum and detail interior surfaces": "catalog.vacuumInterior",
+  "deep clean carpets by size": "catalog.deepCleanCarpets",
+  "upholstery cleaning for sofas": "catalog.upholsterySofas",
+  "single or dining chair cleaning": "catalog.chairCleaningDesc",
+};
+
+export function translateCatalogDescription(t: Translator["t"], description: string | null) {
+  if (!description) return description;
+  const key = CATALOG_DESCRIPTION_KEYS[description.trim().toLowerCase()];
+  return key ? t(key) : description;
+}
+
 export function localeTag(locale: Locale) {
   return LOCALE_TAGS[locale];
 }

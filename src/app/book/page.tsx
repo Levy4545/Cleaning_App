@@ -24,7 +24,14 @@ export default async function BookPage({
   ]);
 
   return (
-    <AppShell variant="customer" user={user} title={t("book.title")} description={t("book.description")}>
+    <AppShell
+      variant="customer"
+      user={user}
+      title={t("book.title")}
+      titleKey="book.title"
+      description={t("book.description")}
+      descriptionKey="book.description"
+    >
       <BookingForm
         initialServiceId={initialServiceId}
         services={services.map((s) => ({

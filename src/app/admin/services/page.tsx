@@ -49,7 +49,9 @@ export default async function AdminServicesPage() {
       variant="admin"
       user={admin}
       title={t("admin.servicesTitle")}
+      titleKey="admin.servicesTitle"
       description={t("admin.servicesBody")}
+      descriptionKey="admin.servicesBody"
     >
       <ServicesCatalog categories={categories} services={services} />
     </AppShell>

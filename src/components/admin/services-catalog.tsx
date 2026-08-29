@@ -31,7 +31,7 @@ import { formatDeliveryMode, formatItemType, formatPriceRange } from "@/lib/form
 import { ServiceIcon } from "@/lib/service-icon";
 import { slugify } from "@/lib/slugify";
 import { cn } from "@/lib/utils";
-import { translateCatalogName } from "@/i18n/format";
+import { translateCatalogName, translateCatalogDescription } from "@/i18n/format";
 import { useI18n } from "@/i18n/provider";
 
 export type CatalogCategory = {
@@ -393,7 +393,9 @@ export function ServicesCatalog({
                           {service.itemTypeOptions.length > 0
                             ? ` · ${service.itemTypeOptions.map((item) => formatItemType(item, t)).join(", ")}`
                             : ` · ${t("catalog.noItemTypes")}`}
-                          {service.description ? ` · ${service.description}` : ""}
+                          {service.description
+                            ? ` · ${translateCatalogDescription(t, service.description)}`
+                            : ""}
                         </p>
                       </div>
                       <div className="flex flex-wrap gap-2">

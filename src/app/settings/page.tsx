@@ -18,7 +18,9 @@ export default async function SettingsPage() {
       variant="customer"
       user={user}
       title={t("settings.title")}
+      titleKey="settings.title"
       description={t("settings.description")}
+      descriptionKey="settings.description"
     >
       <div className="max-w-3xl space-y-5">
         <Card glow>

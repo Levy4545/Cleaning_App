@@ -391,6 +391,10 @@ export const en = {
     homeCare: "Home Care",
     leather: "Leather",
     fabric: "Fabric",
+    vacuumInterior: "Vacuum and detail interior surfaces",
+    deepCleanCarpets: "Deep clean carpets by size",
+    upholsterySofas: "Upholstery cleaning for sofas",
+    chairCleaningDesc: "Single or dining chair cleaning",
   },
 } as const;
 

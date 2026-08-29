@@ -395,5 +395,9 @@ export const ro: Messages = {
     homeCare: "Îngrijire casă",
     leather: "Piele",
     fabric: "Țesătură",
+    vacuumInterior: "Aspirare și detalii pentru suprafețele interioare",
+    deepCleanCarpets: "Curățare profundă a covoarelor după dimensiune",
+    upholsterySofas: "Curățare tapițerie pentru canapele",
+    chairCleaningDesc: "Curățare scaun individual sau de dining",
   },
 };

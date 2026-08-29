@@ -42,7 +42,9 @@ export default async function AdminCalendarPage() {
       variant="admin"
       user={admin}
       title={t("admin.calendarTitle")}
+      titleKey="admin.calendarTitle"
       description={t("admin.calendarBody")}
+      descriptionKey="admin.calendarBody"
     >
       <WeekCalendar
         slots={slots.map((slot) => ({

@@ -38,7 +38,9 @@ export default async function NotificationsPage() {
       variant={user.role === "ADMIN" ? "admin" : "customer"}
       user={user}
       title={t("notifications.title")}
+      titleKey="notifications.title"
       description={t("notifications.description")}
+      descriptionKey="notifications.description"
     >
       <NotificationsPageClient items={items} unreadCount={unreadCount} />
     </AppShell>

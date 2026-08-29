@@ -4,23 +4,39 @@ import { AppSidebar, Avatar, type ShellUser } from "@/components/layout/app-side
 import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { Logo } from "@/components/layout/logo";
 import { MobileNav } from "@/components/layout/mobile-nav";
+import { ShellHeading } from "@/components/layout/shell-heading";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import type { MessageKey, TranslateVars } from "@/i18n/dictionary";
 
 export function AppShell({
   variant = "customer",
   user,
   title,
+  titleKey,
   description,
+  descriptionKey,
+  descriptionVars,
   actions,
   children,
 }: {
   variant?: "customer" | "admin";
   user?: ShellUser;
   title: string;
+  titleKey?: MessageKey;
   description?: string;
+  descriptionKey?: MessageKey;
+  descriptionVars?: TranslateVars;
   actions?: ReactNode;
   children: ReactNode;
 }) {
+  const headingProps = {
+    title,
+    titleKey,
+    description,
+    descriptionKey,
+    descriptionVars,
+  };
+
   return (
     <div className="min-h-screen bg-ink">
       <AppSidebar variant={variant} user={user} />
@@ -34,12 +50,7 @@ export function AppShell({
               className="md:hidden"
             />
 
-            <div className="hidden min-w-0 flex-1 md:block">
-              <h1 className="font-display text-2xl tracking-tight text-bone">{title}</h1>
-              {description ? (
-                <p className="mt-0.5 truncate text-sm text-ash">{description}</p>
-              ) : null}
-            </div>
+            <ShellHeading className="hidden min-w-0 flex-1 md:block" {...headingProps} />
 
             <div className="ml-auto flex items-center gap-2">
               <LanguageSwitcher />
@@ -49,10 +60,7 @@ export function AppShell({
             </div>
           </div>
 
-          <div className="px-4 pb-4 md:hidden">
-            <h1 className="font-display text-2xl tracking-tight text-bone">{title}</h1>
-            {description ? <p className="mt-0.5 text-sm text-ash">{description}</p> : null}
-          </div>
+          <ShellHeading className="px-4 pb-4 md:hidden" {...headingProps} />
         </header>
 
         <main className="px-4 pb-28 pt-6 sm:px-8 md:pb-12">{children}</main>

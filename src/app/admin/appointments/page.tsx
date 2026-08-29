@@ -73,7 +73,10 @@ export default async function AdminAppointmentsPage() {
       variant="admin"
       user={admin}
       title={t("admin.appointmentsTitle")}
+      titleKey="admin.appointmentsTitle"
       description={t("admin.appointmentsCount", { total: rows.length, pending })}
+      descriptionKey="admin.appointmentsCount"
+      descriptionVars={{ total: rows.length, pending }}
     >
       <AppointmentsInbox rows={rows} />
     </AppShell>

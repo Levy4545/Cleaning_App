@@ -6,7 +6,7 @@ import { SiteHeader } from "@/components/layout/header";
 import { LogoMark } from "@/components/layout/logo";
 import { ButtonLink } from "@/components/ui/button";
 import { formatPriceRange } from "@/i18n/format";
-import { translateCatalogName } from "@/i18n/format";
+import { translateCatalogDescription, translateCatalogName } from "@/i18n/format";
 import { useI18n } from "@/i18n/provider";
 import { ServiceIcon } from "@/lib/service-icon";
 
@@ -87,7 +87,8 @@ export function HomeView({ services }: { services: HomeServiceCard[] }) {
                   {translateCatalogName(t, service.name)}
                 </h3>
                 <p className="mt-2 min-h-10 text-sm leading-relaxed text-ash">
-                  {service.description ?? t("home.defaultDescription")}
+                  {translateCatalogDescription(t, service.description) ??
+                    t("home.defaultDescription")}
                 </p>
                 <div className="mt-5 flex items-end justify-between border-t border-line pt-4">
                   <span className="inline-flex items-center gap-1.5 text-xs text-faint">

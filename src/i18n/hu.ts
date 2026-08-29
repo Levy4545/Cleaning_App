@@ -395,5 +395,9 @@ export const hu: Messages = {
     homeCare: "Otthonápolás",
     leather: "Bőr",
     fabric: "Szövet",
+    vacuumInterior: "Porszívózás és beltéri felületek ápolása",
+    deepCleanCarpets: "Mélytisztítás méret szerint",
+    upholsterySofas: "Kárpittisztítás kanapékhoz",
+    chairCleaningDesc: "Egyedi vagy étkezőszék tisztítása",
   },
 };

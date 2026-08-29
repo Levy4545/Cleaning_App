@@ -63,9 +63,12 @@ export default async function DashboardPage() {
       variant="customer"
       user={user}
       title={t("dashboard.title")}
+      titleKey="dashboard.title"
       description={
         user.name ? t("dashboard.welcomeNamed", { name: user.name }) : t("dashboard.welcome")
       }
+      descriptionKey={user.name ? "dashboard.welcomeNamed" : "dashboard.welcome"}
+      descriptionVars={user.name ? { name: user.name } : undefined}
       actions={
         <ButtonLink href="/book" size="sm">
           <CalendarPlus className="h-4 w-4" />

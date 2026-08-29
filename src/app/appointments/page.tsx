@@ -47,7 +47,9 @@ export default async function AppointmentsPage() {
       variant="customer"
       user={user}
       title={t("appointments.title")}
+      titleKey="appointments.title"
       description={t("appointments.description")}
+      descriptionKey="appointments.description"
       actions={
         <ButtonLink href="/book" size="sm">
           <CalendarPlus className="h-4 w-4" />

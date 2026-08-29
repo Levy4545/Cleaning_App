@@ -69,6 +69,7 @@ export default async function AdminHomePage() {
       variant="admin"
       user={admin}
       title={t("admin.overview")}
+      titleKey="admin.overview"
       description={formatLongDate(new Date(), locale)}
       actions={
         <ButtonLink href="/admin/calendar" size="sm">
