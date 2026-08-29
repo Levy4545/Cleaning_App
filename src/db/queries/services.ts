@@ -175,6 +175,7 @@ export async function createService(data: {
   deliveryModes: string[];
   itemTypeOptions: string[];
   durationMinutes: number;
+  requiresTimeWindow?: boolean;
   priceMin: string;
   priceMax: string;
   isActive?: boolean;
@@ -197,6 +198,7 @@ export async function updateService(data: {
   deliveryModes: string[];
   itemTypeOptions: string[];
   durationMinutes: number;
+  requiresTimeWindow: boolean;
   priceMin: string;
   priceMax: string;
   isActive: boolean;
@@ -211,6 +213,7 @@ export async function updateService(data: {
       deliveryModes: data.deliveryModes,
       itemTypeOptions: data.itemTypeOptions,
       durationMinutes: data.durationMinutes,
+      requiresTimeWindow: data.requiresTimeWindow,
       priceMin: data.priceMin,
       priceMax: data.priceMax,
       isActive: data.isActive,

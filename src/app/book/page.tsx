@@ -41,6 +41,7 @@ export default async function BookPage({
           priceMin: s.priceMin,
           priceMax: s.priceMax,
           durationMinutes: s.durationMinutes,
+          requiresTimeWindow: s.requiresTimeWindow,
           deliveryModes: s.deliveryModes,
           itemTypeOptions: s.itemTypeOptions ?? [],
         }))}

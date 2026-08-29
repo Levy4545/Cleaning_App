@@ -75,6 +75,7 @@ const serviceFieldsSchema = z.object({
     .int("Duration must be a whole number")
     .min(15, "Duration must be at least 15 minutes")
     .max(24 * 60, "Duration is too long"),
+  requiresTimeWindow: z.boolean().optional(),
   priceMin: moneyAmountSchema,
   priceMax: moneyAmountSchema,
   isActive: z.boolean().optional(),

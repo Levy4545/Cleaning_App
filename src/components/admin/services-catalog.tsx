@@ -56,6 +56,7 @@ export type CatalogService = {
   deliveryModes: string[];
   itemTypeOptions: string[];
   durationMinutes: number;
+  requiresTimeWindow: boolean;
   priceMin: string;
   priceMax: string;
   isActive: boolean;
@@ -79,6 +80,7 @@ type ServiceFormState = {
   deliveryModes: DeliveryMode[];
   itemTypeOptionsText: string;
   durationMinutes: string;
+  requiresTimeWindow: boolean;
   priceMin: string;
   priceMax: string;
   isActive: boolean;
@@ -97,6 +99,7 @@ const emptyServiceForm = (categoryId: string): ServiceFormState => ({
   deliveryModes: ["DROP_OFF"],
   itemTypeOptionsText: "",
   durationMinutes: "60",
+  requiresTimeWindow: true,
   priceMin: "0.00",
   priceMax: "0.00",
   isActive: true,
@@ -223,6 +226,7 @@ export function ServicesCatalog({
       ),
       itemTypeOptionsText: service.itemTypeOptions.join(", "),
       durationMinutes: String(service.durationMinutes),
+      requiresTimeWindow: service.requiresTimeWindow,
       priceMin: service.priceMin,
       priceMax: service.priceMax,
       isActive: service.isActive,
@@ -425,6 +429,9 @@ export function ServicesCatalog({
                           {service.itemTypeOptions.length > 0
                             ? ` · ${service.itemTypeOptions.map((item) => formatItemType(item, t)).join(", ")}`
                             : ` · ${t("catalog.noItemTypes")}`}
+                          {service.requiresTimeWindow
+                            ? ""
+                            : ` · ${t("common.toBeScheduled")}`}
                           {catalogDescription(service.description, service.id, service.name)
                             ? ` · ${catalogDescription(service.description, service.id, service.name)}`
                             : ""}
@@ -570,6 +577,7 @@ export function ServicesCatalog({
                 deliveryModes: serviceForm.deliveryModes,
                 itemTypeOptions: parseItemTypeOptions(serviceForm.itemTypeOptionsText),
                 durationMinutes: Number(serviceForm.durationMinutes),
+                requiresTimeWindow: serviceForm.requiresTimeWindow,
                 priceMin: serviceForm.priceMin,
                 priceMax: serviceForm.priceMax,
                 isActive: serviceForm.isActive,
@@ -782,6 +790,24 @@ export function ServicesCatalog({
                 />
               </div>
             </div>
+
+            <label className="flex items-start gap-2 text-sm text-ash">
+              <input
+                type="checkbox"
+                className="mt-0.5 h-4 w-4 rounded border-line bg-surface text-gold focus:ring-gold/40"
+                checked={serviceForm.requiresTimeWindow}
+                onChange={(event) =>
+                  setServiceForm((prev) => ({
+                    ...prev,
+                    requiresTimeWindow: event.target.checked,
+                  }))
+                }
+              />
+              <span>
+                <span className="block text-bone">{t("catalog.requiresTimeWindow")}</span>
+                <span className="block text-xs text-faint">{t("catalog.requiresTimeWindowHint")}</span>
+              </span>
+            </label>
 
             <label className="flex items-center gap-2 text-sm text-ash">
               <input

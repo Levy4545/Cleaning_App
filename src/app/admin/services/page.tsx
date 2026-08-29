@@ -42,6 +42,7 @@ export default async function AdminServicesPage() {
       deliveryModes: service.deliveryModes,
       itemTypeOptions: service.itemTypeOptions ?? [],
       durationMinutes: service.durationMinutes,
+      requiresTimeWindow: service.requiresTimeWindow,
       priceMin: service.priceMin,
       priceMax: service.priceMax,
       isActive: service.isActive,

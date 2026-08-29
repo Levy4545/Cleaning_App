@@ -30,9 +30,19 @@ type ServiceOption = {
   priceMin: string;
   priceMax: string;
   durationMinutes: number;
+  requiresTimeWindow: boolean;
   deliveryModes: string[];
   itemTypeOptions: string[];
 };
+
+type StepId = "service" | "details" | "time" | "confirm";
+
+function stepsForService(service?: ServiceOption): StepId[] {
+  if (service && service.requiresTimeWindow === false) {
+    return ["service", "details", "confirm"];
+  }
+  return ["service", "details", "time", "confirm"];
+}
 
 type SlotOption = {
   id: string;
@@ -41,8 +51,6 @@ type SlotOption = {
 };
 
 type DeliveryMode = "ON_SITE" | "DROP_OFF";
-
-const STEP_COUNT = 4;
 
 /**
  * Creates a local calendar-day key from an ISO date string.
@@ -111,6 +119,9 @@ export function BookingForm({
 
   const selectedService = services.find((s) => s.id === serviceId);
   const selectedSlot = slots.find((s) => s.id === slotId);
+  const stepIds = stepsForService(selectedService);
+  const currentStepId = stepIds[step] ?? "service";
+  const needsWindow = selectedService?.requiresTimeWindow !== false;
 
   const availableModes = useMemo(() => {
     const modes = selectedService?.deliveryModes ?? ["DROP_OFF"];
@@ -140,13 +151,17 @@ export function BookingForm({
     setServiceId(next.id);
     setDeliveryMode(initialModeForService(next));
     setItemType(initialItemTypeForService(next));
+    if (next.requiresTimeWindow === false) {
+      setSlotId("");
+    }
+    setStep((current) => Math.min(current, stepsForService(next).length - 1));
   };
 
   const itemTypeOptions = selectedService?.itemTypeOptions ?? [];
 
   const stepError = (): string | null => {
-    if (step === 0 && !serviceId) return t("book.pickService");
-    if (step === 1) {
+    if (currentStepId === "service" && !serviceId) return t("book.pickService");
+    if (currentStepId === "details") {
       if (quantity < 1) return t("book.quantityMin");
       if (itemTypeOptions.length > 0 && !itemType) {
         return t("book.pickItemType");
@@ -155,7 +170,7 @@ export function BookingForm({
         return t("book.needAddress");
       }
     }
-    if (step === 2 && !slotId) return t("book.pickWindow");
+    if (currentStepId === "time" && !slotId) return t("book.pickWindow");
     return null;
   };
 
@@ -166,7 +181,7 @@ export function BookingForm({
       return;
     }
     setError(null);
-    setStep((s) => Math.min(s + 1, STEP_COUNT - 1));
+    setStep((s) => Math.min(s + 1, stepIds.length - 1));
   };
 
   const goBack = () => {
@@ -179,7 +194,7 @@ export function BookingForm({
     startTransition(async () => {
       const result = await bookAppointment({
         serviceId,
-        slotId,
+        slotId: needsWindow && slotId ? slotId : undefined,
         preferredDeliveryMode: deliveryMode,
         itemType: itemTypeOptions.length > 0 ? itemType : undefined,
         quantity,
@@ -210,11 +225,11 @@ export function BookingForm({
 
   return (
     <div className="space-y-6">
-      <Stepper step={step} />
+      <Stepper step={step} stepIds={stepIds} />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px] lg:items-start">
         <Card glow className="p-6 sm:p-8">
-          {step === 0 ? (
+          {currentStepId === "service" ? (
             <StepShell title={t("book.chooseService")} hint={t("book.chooseServiceHint")}>
               <div className="grid gap-3 sm:grid-cols-2">
                 {services.map((service) => {
@@ -255,7 +270,7 @@ export function BookingForm({
             </StepShell>
           ) : null}
 
-          {step === 1 ? (
+          {currentStepId === "details" ? (
             <StepShell title={t("book.addDetails")} hint={t("book.addDetailsHint")}>
               <div className="space-y-5">
                 <div className="space-y-2">
@@ -379,7 +394,7 @@ export function BookingForm({
             </StepShell>
           ) : null}
 
-          {step === 2 ? (
+          {currentStepId === "time" ? (
             <StepShell title={t("book.pickTime")} hint={t("book.pickTimeHint")}>
               {days.length === 0 ? (
                 <div className="flex flex-col items-center gap-3 py-10 text-center">
@@ -449,7 +464,7 @@ export function BookingForm({
             </StepShell>
           ) : null}
 
-          {step === 3 ? (
+          {currentStepId === "confirm" ? (
             <StepShell title={t("book.confirm")} hint={t("book.confirmHint")}>
               <dl className="divide-y divide-line overflow-hidden rounded-xl border border-line">
                 <SummaryRow
@@ -487,9 +502,14 @@ export function BookingForm({
                           day: "numeric",
                           month: "short",
                         })} · ${formatTime(selectedSlot.startsAt, locale)} – ${formatTime(selectedSlot.endsAt, locale)}`
-                      : "—"
+                      : needsWindow
+                        ? "—"
+                        : t("common.toBeScheduled")
                   }
                 />
+                {!needsWindow ? (
+                  <div className="px-4 py-3 text-xs text-faint">{t("book.noWindowNeeded")}</div>
+                ) : null}
                 {deliveryMode === "ON_SITE" ? (
                   <SummaryRow
                     label={t("common.address")}
@@ -516,7 +536,7 @@ export function BookingForm({
               {t("common.back")}
             </Button>
 
-            {step < STEP_COUNT - 1 ? (
+            {currentStepId !== "confirm" ? (
               <Button type="button" onClick={goNext}>
                 {t("common.continue")}
                 <ArrowRight className="h-4 w-4" />
@@ -557,7 +577,9 @@ export function BookingForm({
               value={
                 selectedSlot
                   ? `${formatTime(selectedSlot.startsAt, locale)} – ${formatTime(selectedSlot.endsAt, locale)}`
-                  : t("common.notSelected")
+                  : needsWindow
+                    ? t("common.notSelected")
+                    : t("common.toBeScheduled")
               }
             />
           </dl>
@@ -577,14 +599,15 @@ export function BookingForm({
   );
 }
 
-function Stepper({ step }: { step: number }) {
+function Stepper({ step, stepIds }: { step: number; stepIds: StepId[] }) {
   const { t } = useI18n();
-  const steps = [
-    t("book.stepService"),
-    t("book.stepDetails"),
-    t("book.stepTime"),
-    t("book.stepConfirm"),
-  ];
+  const labels: Record<StepId, string> = {
+    service: t("book.stepService"),
+    details: t("book.stepDetails"),
+    time: t("book.stepTime"),
+    confirm: t("book.stepConfirm"),
+  };
+  const steps = stepIds.map((id) => labels[id]);
 
   return (
     <ol className="flex items-center">

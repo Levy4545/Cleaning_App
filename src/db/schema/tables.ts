@@ -182,6 +182,8 @@ export const services = pgTable("services", {
    */
   itemTypeOptions: text("item_type_options").array().notNull().default([]),
   durationMinutes: integer("duration_minutes").notNull().default(60),
+  /** When false, customers can request the service without picking a slot. */
+  requiresTimeWindow: boolean("requires_time_window").notNull().default(true),
   /** Inclusive price range — quotes are not fixed single amounts. */
   priceMin: numeric("price_min", { precision: 10, scale: 2 }).notNull().default("0"),
   priceMax: numeric("price_max", { precision: 10, scale: 2 }).notNull().default("0"),
@@ -229,9 +231,7 @@ export const appointments = pgTable("appointments", {
   serviceId: uuid("service_id")
     .notNull()
     .references(() => services.id, { onDelete: "restrict" }),
-  slotId: uuid("slot_id")
-    .notNull()
-    .references(() => availabilitySlots.id, { onDelete: "restrict" }),
+  slotId: uuid("slot_id").references(() => availabilitySlots.id, { onDelete: "restrict" }),
   cleanerId: uuid("cleaner_id").references(() => users.id, { onDelete: "set null" }),
   addressId: uuid("address_id").references(() => addresses.id, { onDelete: "set null" }),
   status: appointmentStatusEnum("status").notNull().default("PENDING"),

@@ -90,12 +90,17 @@ export async function bookAppointment(
     };
   }
 
+  const needsWindow = service.requiresTimeWindow !== false;
+  if (needsWindow && !parsed.data.slotId) {
+    return { success: false, error: "Choose a time window to continue." };
+  }
+
   try {
     const appointment = await createBooking({
       shopId,
       customerId: user.id,
       serviceId: service.id,
-      slotId: parsed.data.slotId,
+      slotId: needsWindow ? parsed.data.slotId : null,
       address,
       deliveryMode: preferredMode,
       notes: parsed.data.notes,

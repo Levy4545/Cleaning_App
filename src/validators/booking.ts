@@ -15,7 +15,7 @@ export const updateSlotSchema = z.object({
 
 export const createBookingSchema = z.object({
   serviceId: z.string().uuid(),
-  slotId: z.string().uuid(),
+  slotId: z.string().uuid().optional(),
   /** Customer preference — admin confirms/overrides on approve. */
   preferredDeliveryMode: z.enum(["ON_SITE", "DROP_OFF"]).default("DROP_OFF"),
   /** Selected from the service's itemTypeOptions when that list is non-empty. */

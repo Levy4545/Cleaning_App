@@ -134,7 +134,8 @@ export async function deleteSlot(slotId: string, shopId: string) {
     .where(and(eq(availabilitySlots.id, slotId), eq(availabilitySlots.shopId, shopId)));
 }
 
-export async function findSlotById(id: string, shopId: string) {
+export async function findSlotById(id: string | null | undefined, shopId: string) {
+  if (!id) return null;
   const [row] = await db
     .select()
     .from(availabilitySlots)
@@ -319,7 +320,7 @@ export async function createBooking(input: {
   shopId: string;
   customerId: string;
   serviceId: string;
-  slotId: string;
+  slotId?: string | null;
   addressId?: string | null;
   address?: {
     line1: string;
@@ -338,35 +339,41 @@ export async function createBooking(input: {
   actorId: string;
 }) {
   return db.transaction(async (tx) => {
-    const [slot] = await tx
-      .select()
-      .from(availabilitySlots)
-      .where(
-        and(
-          eq(availabilitySlots.id, input.slotId),
-          eq(availabilitySlots.shopId, input.shopId),
-        ),
-      )
-      .limit(1)
-      .for("update");
+    let slot: typeof availabilitySlots.$inferSelect | null = null;
 
-    if (!slot || slot.status !== "OPEN") {
-      throw new Error("Selected slot is not available");
-    }
+    if (input.slotId) {
+      const [locked] = await tx
+        .select()
+        .from(availabilitySlots)
+        .where(
+          and(
+            eq(availabilitySlots.id, input.slotId),
+            eq(availabilitySlots.shopId, input.shopId),
+          ),
+        )
+        .limit(1)
+        .for("update");
 
-    const [existingActive] = await tx
-      .select({ id: appointments.id })
-      .from(appointments)
-      .where(
-        and(
-          eq(appointments.slotId, slot.id),
-          sql`${appointments.status} in ('PENDING','APPROVED','ASSIGNED','IN_PROGRESS')`,
-        ),
-      )
-      .limit(1);
+      if (!locked || locked.status !== "OPEN") {
+        throw new Error("Selected slot is not available");
+      }
 
-    if (existingActive) {
-      throw new Error("This time window was just booked by someone else. Pick another slot.");
+      const [existingActive] = await tx
+        .select({ id: appointments.id })
+        .from(appointments)
+        .where(
+          and(
+            eq(appointments.slotId, locked.id),
+            sql`${appointments.status} in ('PENDING','APPROVED','ASSIGNED','IN_PROGRESS')`,
+          ),
+        )
+        .limit(1);
+
+      if (existingActive) {
+        throw new Error("This time window was just booked by someone else. Pick another slot.");
+      }
+
+      slot = locked;
     }
 
     let addressId = input.addressId ?? null;
@@ -393,7 +400,7 @@ export async function createBooking(input: {
         shopId: input.shopId,
         customerId: input.customerId,
         serviceId: input.serviceId,
-        slotId: input.slotId,
+        slotId: slot?.id ?? null,
         addressId,
         deliveryMode: input.deliveryMode,
         notes: input.notes,
@@ -424,14 +431,16 @@ export async function createBooking(input: {
       amount: input.amount,
     });
 
-    // Hold the window so other clients cannot book it while pending/active.
-    await tx
-      .update(availabilitySlots)
-      .set({
-        bookedCount: slot.bookedCount + 1,
-        status: "FULL",
-      })
-      .where(eq(availabilitySlots.id, slot.id));
+    if (slot) {
+      // Hold the window so other clients cannot book it while pending/active.
+      await tx
+        .update(availabilitySlots)
+        .set({
+          bookedCount: slot.bookedCount + 1,
+          status: "FULL",
+        })
+        .where(eq(availabilitySlots.id, slot.id));
+    }
 
     await tx.insert(jobLogs).values({
       shopId: input.shopId,
@@ -501,7 +510,7 @@ export async function transitionAppointment(input: {
       input.to === "CANCELLED_BY_ADMIN" ||
       input.to === "REJECTED";
 
-    if (terminalCancel) {
+    if (terminalCancel && appointment.slotId) {
       const [slot] = await tx
         .select()
         .from(availabilitySlots)
