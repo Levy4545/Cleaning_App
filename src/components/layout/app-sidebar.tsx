@@ -7,6 +7,7 @@ import { LogOut } from "lucide-react";
 import { signOut } from "@/actions/auth";
 import { Logo } from "@/components/layout/logo";
 import { adminNav, customerNav, customerViewItem, isActive } from "@/components/layout/nav-items";
+import { useI18n } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 
 export type ShellUser = {
@@ -23,19 +24,34 @@ export function AppSidebar({
   user?: ShellUser;
 }) {
   const pathname = usePathname();
+  const { t } = useI18n();
   const admin = variant === "admin";
   const links = admin ? adminNav : customerNav;
+  const labels: Record<string, { label: string; short: string }> = {
+    "/dashboard": { label: t("nav.dashboard"), short: t("nav.dashboardShort") },
+    "/book": { label: t("nav.book"), short: t("nav.book") },
+    "/appointments": { label: t("nav.appointments"), short: t("nav.appointmentsShort") },
+    "/settings": { label: t("nav.settings"), short: t("nav.settings") },
+    "/admin": { label: t("nav.overview"), short: t("nav.overview") },
+    "/admin/calendar": { label: t("nav.calendar"), short: t("nav.calendar") },
+    "/admin/appointments": {
+      label: t("nav.adminAppointments"),
+      short: t("nav.adminAppointmentsShort"),
+    },
+    "/admin/services": { label: t("nav.services"), short: t("nav.servicesShort") },
+  };
 
   return (
     <aside className="fixed inset-y-0 left-0 hidden w-64 flex-col border-r border-line bg-surface md:flex">
       <div className="px-6 py-6">
-        <Logo href={admin ? "/admin" : "/dashboard"} badge={admin ? "Admin" : undefined} />
+        <Logo href={admin ? "/admin" : "/dashboard"} badge={admin ? t("common.admin") : undefined} />
       </div>
 
       <nav className="flex-1 space-y-1 px-3">
         {links.map((link) => {
           const active = isActive(pathname, link.href);
           const Icon = link.icon;
+          const copy = labels[link.href];
 
           return (
             <Link
@@ -53,7 +69,7 @@ export function AppSidebar({
                 <span className="absolute inset-y-1.5 left-0 w-0.5 rounded-full bg-gold" />
               ) : null}
               <Icon className="h-4 w-4 shrink-0" />
-              {link.label}
+              {copy?.label ?? link.label}
             </Link>
           );
         })}
@@ -66,7 +82,7 @@ export function AppSidebar({
               className="flex items-center gap-3 rounded-lg px-3 py-2.5 text-sm text-faint transition-colors hover:bg-elevated hover:text-ash"
             >
               <customerViewItem.icon className="h-4 w-4 shrink-0" />
-              {customerViewItem.label}
+              {t("nav.customerView")}
             </Link>
           </>
         ) : null}
@@ -76,14 +92,16 @@ export function AppSidebar({
         <div className="m-3 flex items-center gap-3 rounded-xl border border-line bg-panel p-3">
           <Avatar name={user.name} email={user.email} />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-medium text-bone">{user.name ?? "Account"}</p>
+            <p className="truncate text-sm font-medium text-bone">
+              {user.name ?? t("common.account")}
+            </p>
             <p className="truncate text-xs text-faint">{user.email}</p>
           </div>
           <form action={signOut}>
             <button
               type="submit"
-              aria-label="Sign out"
-              title="Sign out"
+              aria-label={t("common.signOut")}
+              title={t("common.signOut")}
               className="rounded-md p-1.5 text-faint transition-colors hover:bg-elevated hover:text-bone"
             >
               <LogOut className="h-4 w-4" />

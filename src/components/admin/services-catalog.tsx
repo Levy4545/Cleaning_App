@@ -31,6 +31,8 @@ import { formatDeliveryMode, formatItemType, formatPriceRange } from "@/lib/form
 import { ServiceIcon } from "@/lib/service-icon";
 import { slugify } from "@/lib/slugify";
 import { cn } from "@/lib/utils";
+import { translateCatalogName } from "@/i18n/format";
+import { useI18n } from "@/i18n/provider";
 
 export type CatalogCategory = {
   id: string;
@@ -106,6 +108,7 @@ export function ServicesCatalog({
   services: CatalogService[];
 }) {
   const router = useRouter();
+  const { t, locale } = useI18n();
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | "all">(
     categories[0]?.id ?? "all",
   );
@@ -142,7 +145,7 @@ export function ServicesCatalog({
     startTransition(async () => {
       const result = await action();
       if (!result.success) {
-        setError(result.error ?? "Action failed");
+        setError(result.error ?? t("common.actionFailed"));
         return;
       }
       setMessage(successMessage);
@@ -216,12 +219,12 @@ export function ServicesCatalog({
         <Card className="h-fit">
           <div className="mb-4 flex items-center justify-between gap-2">
             <div>
-              <CardTitle className="text-base">Categories</CardTitle>
-              <CardDescription>Group services for the booking wizard.</CardDescription>
+              <CardTitle className="text-base">{t("catalog.categories")}</CardTitle>
+              <CardDescription>{t("catalog.categoriesHint")}</CardDescription>
             </div>
             <Button type="button" size="sm" variant="secondary" onClick={openCreateCategory}>
               <FolderPlus className="h-4 w-4" />
-              Add
+              {t("catalog.add")}
             </Button>
           </div>
 
@@ -236,7 +239,7 @@ export function ServicesCatalog({
                   : "text-ash hover:bg-elevated hover:text-bone",
               )}
             >
-              <span>All services</span>
+              <span>{t("catalog.allServices")}</span>
               <span className="text-xs text-faint">{services.length}</span>
             </button>
 
@@ -258,9 +261,11 @@ export function ServicesCatalog({
                       : "text-ash hover:text-bone",
                   )}
                 >
-                  <span className="block truncate font-medium">{category.name}</span>
+                  <span className="block truncate font-medium">
+                    {translateCatalogName(t, category.name)}
+                  </span>
                   <span className="block text-[11px] text-faint">
-                    {category.serviceCount} service{category.serviceCount === 1 ? "" : "s"}
+                    {t("catalog.servicesCount", { n: category.serviceCount })}
                   </span>
                 </button>
                 <button
@@ -277,14 +282,14 @@ export function ServicesCatalog({
                   disabled={isPending || category.serviceCount > 0}
                   title={
                     category.serviceCount > 0
-                      ? "Move or remove services first"
-                      : "Delete empty category"
+                      ? t("catalog.moveOrRemove")
+                      : t("catalog.deleteEmpty")
                   }
                   className="rounded-md p-1.5 text-faint opacity-0 transition-opacity hover:bg-red-500/10 hover:text-red-300 group-hover:opacity-100 disabled:opacity-20"
                   onClick={() =>
                     run(
                       () => deleteServiceCategory(category.id),
-                      `Deleted category “${category.name}”`,
+                      t("catalog.deletedCategory", { name: category.name }),
                     )
                   }
                 >
@@ -294,7 +299,7 @@ export function ServicesCatalog({
             ))}
 
             {categories.length === 0 ? (
-              <p className="px-2 py-4 text-sm text-faint">No categories yet.</p>
+              <p className="px-2 py-4 text-sm text-faint">{t("catalog.noCategories")}</p>
             ) : null}
           </div>
         </Card>
@@ -304,21 +309,24 @@ export function ServicesCatalog({
             <div>
               <h2 className="font-display text-xl text-bone">
                 {selectedCategoryId === "all"
-                  ? "All services"
-                  : (categoryNameById.get(selectedCategoryId) ?? "Services")}
+                  ? t("catalog.allServices")
+                  : translateCatalogName(
+                      t,
+                      categoryNameById.get(selectedCategoryId) ?? t("nav.services"),
+                    )}
               </h2>
               <p className="text-sm text-ash">
-                Inactive services stay in the catalog but cannot be booked.
+                {t("catalog.inactiveHint")}
               </p>
             </div>
             <Button
               type="button"
               onClick={openCreateService}
               disabled={categories.length === 0}
-              title={categories.length === 0 ? "Create a category first" : undefined}
+              title={categories.length === 0 ? t("catalog.createCategoryFirst") : undefined}
             >
               <PackagePlus className="h-4 w-4" />
-              Add service
+              {t("catalog.addService")}
             </Button>
           </div>
 
@@ -326,20 +334,20 @@ export function ServicesCatalog({
             <Card>
               <EmptyState
                 icon={PackagePlus}
-                title="No services here"
+                title={t("catalog.emptyTitle")}
                 description={
                   categories.length === 0
-                    ? "Create a category, then add your first service."
-                    : "Add a service so customers can book it."
+                    ? t("catalog.emptyNoCategory")
+                    : t("catalog.emptyWithCategory")
                 }
                 action={
                   categories.length > 0 ? (
                     <Button type="button" size="sm" onClick={openCreateService}>
-                      Add service
+                      {t("catalog.addService")}
                     </Button>
                   ) : (
                     <Button type="button" size="sm" onClick={openCreateCategory}>
-                      Add category
+                      {t("catalog.addCategory")}
                     </Button>
                   )
                 }
@@ -358,7 +366,9 @@ export function ServicesCatalog({
                       />
                       <div className="min-w-0 flex-1 space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="font-medium text-bone">{service.name}</p>
+                          <p className="font-medium text-bone">
+                            {translateCatalogName(t, service.name)}
+                          </p>
                           <span
                             className={cn(
                               "rounded-full border px-2 py-0.5 text-[11px] uppercase tracking-wider",
@@ -367,19 +377,22 @@ export function ServicesCatalog({
                                 : "border-line bg-elevated text-faint",
                             )}
                           >
-                            {service.isActive ? "Active" : "Inactive"}
+                            {service.isActive ? t("catalog.active") : t("catalog.inactive")}
                           </span>
                         </div>
                         <p className="text-sm text-ash">
-                          {categoryNameById.get(service.categoryId) ?? "Uncategorized"} ·{" "}
-                          {service.durationMinutes} min ·{" "}
-                          {formatPriceRange(service.priceMin, service.priceMax)}
+                          {translateCatalogName(
+                            t,
+                            categoryNameById.get(service.categoryId) ?? t("catalog.uncategorized"),
+                          )}{" "}
+                          · {t("common.minutes", { n: service.durationMinutes })} ·{" "}
+                          {formatPriceRange(service.priceMin, service.priceMax, locale)}
                         </p>
                         <p className="text-xs text-faint">
-                          {service.deliveryModes.map(formatDeliveryMode).join(" · ")}
+                          {service.deliveryModes.map((mode) => formatDeliveryMode(mode, t)).join(" · ")}
                           {service.itemTypeOptions.length > 0
-                            ? ` · ${service.itemTypeOptions.map(formatItemType).join(", ")}`
-                            : " · No item types"}
+                            ? ` · ${service.itemTypeOptions.map((item) => formatItemType(item, t)).join(", ")}`
+                            : ` · ${t("catalog.noItemTypes")}`}
                           {service.description ? ` · ${service.description}` : ""}
                         </p>
                       </div>
@@ -392,7 +405,7 @@ export function ServicesCatalog({
                           onClick={() => openEditService(service)}
                         >
                           <Pencil className="h-3.5 w-3.5" />
-                          Edit
+                          {t("catalog.edit")}
                         </Button>
                         <Button
                           type="button"
@@ -407,13 +420,13 @@ export function ServicesCatalog({
                                   isActive: !service.isActive,
                                 }),
                               service.isActive
-                                ? `Deactivated “${service.name}”`
-                                : `Activated “${service.name}”`,
+                                ? t("catalog.deactivated", { name: service.name })
+                                : t("catalog.activated", { name: service.name }),
                             )
                           }
                         >
                           <Power className="h-3.5 w-3.5" />
-                          {service.isActive ? "Deactivate" : "Activate"}
+                          {service.isActive ? t("catalog.deactivate") : t("catalog.activate")}
                         </Button>
                       </div>
                     </div>
@@ -427,7 +440,7 @@ export function ServicesCatalog({
 
       {categoryFormOpen ? (
         <FormDrawer
-          title={editingCategoryId ? "Edit category" : "New category"}
+          title={editingCategoryId ? t("catalog.editCategory") : t("catalog.newCategory")}
           onClose={() => setCategoryFormOpen(false)}
         >
           <form
@@ -443,7 +456,7 @@ export function ServicesCatalog({
                       name: categoryForm.name,
                       slug: categoryForm.slug || undefined,
                     }),
-                  "Category updated",
+                  t("catalog.categoryUpdated"),
                   close,
                 );
               } else {
@@ -453,14 +466,14 @@ export function ServicesCatalog({
                       name: categoryForm.name,
                       slug: categoryForm.slug || undefined,
                     }),
-                  "Category created",
+                  t("catalog.categoryCreated"),
                   close,
                 );
               }
             }}
           >
             <div className="space-y-2">
-              <Label htmlFor="category-name">Name</Label>
+              <Label htmlFor="category-name">{t("catalog.categoryName")}</Label>
               <Input
                 id="category-name"
                 value={categoryForm.name}
@@ -474,28 +487,28 @@ export function ServicesCatalog({
                         : prev.slug,
                   }));
                 }}
-                placeholder="Vehicle"
+                placeholder={t("catalog.categoryPlaceholder")}
                 required
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="category-slug">Slug</Label>
+              <Label htmlFor="category-slug">{t("catalog.slug")}</Label>
               <Input
                 id="category-slug"
                 value={categoryForm.slug}
                 onChange={(event) =>
                   setCategoryForm((prev) => ({ ...prev, slug: event.target.value }))
                 }
-                placeholder="vehicle"
+                placeholder={t("catalog.slugPlaceholder")}
               />
-              <p className="text-xs text-faint">Leave blank to generate from the name.</p>
+              <p className="text-xs text-faint">{t("catalog.slugHint")}</p>
             </div>
             <div className="flex justify-end gap-2">
               <Button type="button" variant="ghost" onClick={() => setCategoryFormOpen(false)}>
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={isPending}>
-                {editingCategoryId ? "Save category" : "Create category"}
+                {editingCategoryId ? t("catalog.saveCategory") : t("catalog.createCategory")}
               </Button>
             </div>
           </form>
@@ -504,7 +517,7 @@ export function ServicesCatalog({
 
       {serviceFormOpen ? (
         <FormDrawer
-          title={editingServiceId ? "Edit service" : "New service"}
+          title={editingServiceId ? t("catalog.editService") : t("catalog.newService")}
           onClose={() => setServiceFormOpen(false)}
         >
           <form
@@ -527,16 +540,16 @@ export function ServicesCatalog({
               if (editingServiceId) {
                 run(
                   () => updateCatalogService({ serviceId: editingServiceId, ...payload }),
-                  "Service updated",
+                  t("catalog.serviceUpdated"),
                   close,
                 );
               } else {
-                run(() => createCatalogService(payload), "Service created", close);
+                run(() => createCatalogService(payload), t("catalog.serviceCreated"), close);
               }
             }}
           >
             <div className="space-y-2">
-              <Label htmlFor="service-category">Category</Label>
+              <Label htmlFor="service-category">{t("catalog.category")}</Label>
               <Select
                 id="service-category"
                 value={serviceForm.categoryId}
@@ -547,39 +560,39 @@ export function ServicesCatalog({
               >
                 {categories.map((category) => (
                   <option key={category.id} value={category.id}>
-                    {category.name}
+                    {translateCatalogName(t, category.name)}
                   </option>
                 ))}
               </Select>
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="service-name">Name</Label>
+              <Label htmlFor="service-name">{t("catalog.serviceName")}</Label>
               <Input
                 id="service-name"
                 value={serviceForm.name}
                 onChange={(event) =>
                   setServiceForm((prev) => ({ ...prev, name: event.target.value }))
                 }
-                placeholder="Car Interior Cleaning"
+                placeholder={t("catalog.serviceNamePlaceholder")}
                 required
               />
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="service-description">Description</Label>
+              <Label htmlFor="service-description">{t("catalog.description")}</Label>
               <Textarea
                 id="service-description"
                 value={serviceForm.description}
                 onChange={(event) =>
                   setServiceForm((prev) => ({ ...prev, description: event.target.value }))
                 }
-                placeholder="What is included?"
+                placeholder={t("catalog.descriptionPlaceholder")}
               />
             </div>
 
             <div className="space-y-2">
-              <Label>Delivery modes</Label>
+              <Label>{t("catalog.deliveryModes")}</Label>
               <div className="flex flex-wrap gap-2">
                 {(["DROP_OFF", "ON_SITE"] as DeliveryMode[]).map((mode) => {
                   const active = serviceForm.deliveryModes.includes(mode);
@@ -596,7 +609,7 @@ export function ServicesCatalog({
                           : "border-line bg-surface text-ash hover:border-line-strong hover:text-bone",
                       )}
                     >
-                      {formatDeliveryMode(mode)}
+                      {formatDeliveryMode(mode, t)}
                     </button>
                   );
                 })}
@@ -604,7 +617,7 @@ export function ServicesCatalog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="service-item-types">Item types</Label>
+              <Label htmlFor="service-item-types">{t("catalog.itemTypes")}</Label>
               <Input
                 id="service-item-types"
                 value={serviceForm.itemTypeOptionsText}
@@ -616,14 +629,12 @@ export function ServicesCatalog({
                 }
                 placeholder="leather, fabric"
               />
-              <p className="text-xs text-faint">
-                Comma-separated. Leave blank to hide item type on booking.
-              </p>
+              <p className="text-xs text-faint">{t("catalog.itemTypesHint")}</p>
             </div>
 
             <div className="grid gap-4 sm:grid-cols-3">
               <div className="space-y-2">
-                <Label htmlFor="service-duration">Duration (minutes)</Label>
+                <Label htmlFor="service-duration">{t("catalog.duration")}</Label>
                 <Input
                   id="service-duration"
                   type="number"
@@ -640,7 +651,7 @@ export function ServicesCatalog({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="service-price-min">Price min</Label>
+                <Label htmlFor="service-price-min">{t("catalog.priceMin")}</Label>
                 <Input
                   id="service-price-min"
                   inputMode="decimal"
@@ -653,7 +664,7 @@ export function ServicesCatalog({
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="service-price-max">Price max</Label>
+                <Label htmlFor="service-price-max">{t("catalog.priceMax")}</Label>
                 <Input
                   id="service-price-max"
                   inputMode="decimal"
@@ -676,15 +687,15 @@ export function ServicesCatalog({
                   setServiceForm((prev) => ({ ...prev, isActive: event.target.checked }))
                 }
               />
-              Active and bookable
+              {t("catalog.activeBookable")}
             </label>
 
             <div className="flex justify-end gap-2">
               <Button type="button" variant="ghost" onClick={() => setServiceFormOpen(false)}>
-                Cancel
+                {t("common.cancel")}
               </Button>
               <Button type="submit" disabled={isPending || categories.length === 0}>
-                {editingServiceId ? "Save service" : "Create service"}
+                {editingServiceId ? t("catalog.saveService") : t("catalog.createService")}
               </Button>
             </div>
           </form>
@@ -703,6 +714,7 @@ function FormDrawer({
   onClose: () => void;
   children: React.ReactNode;
 }) {
+  const { t } = useI18n();
   return (
     <div className="fixed inset-0 z-50 flex items-end justify-center bg-ink/70 p-4 sm:items-center">
       <div
@@ -715,7 +727,7 @@ function FormDrawer({
           <h3 className="font-display text-xl text-bone">{title}</h3>
           <button
             type="button"
-            aria-label="Close"
+            aria-label={t("common.close")}
             onClick={onClose}
             className="rounded-md p-1.5 text-faint transition-colors hover:bg-elevated hover:text-bone"
           >

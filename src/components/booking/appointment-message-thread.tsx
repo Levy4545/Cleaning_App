@@ -1,12 +1,14 @@
 "use client";
 
-import { useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useState, useTransition } from "react";
 import { Send } from "lucide-react";
 
 import { listAppointmentMessages, sendAppointmentMessage } from "@/actions/messages";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
+import { localeTag } from "@/i18n/format";
+import { useI18n } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 
 type MessageRow = {
@@ -19,23 +21,24 @@ type MessageRow = {
 };
 
 export function AppointmentMessageThread({ appointmentId }: { appointmentId: string }) {
+  const { t, locale } = useI18n();
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
-  const load = () => {
+  const load = useCallback(() => {
     startTransition(async () => {
       const result = await listAppointmentMessages(appointmentId);
       if (result.success && result.data) {
         setMessages(result.data);
       }
     });
-  };
+  }, [appointmentId]);
 
   useEffect(() => {
     load();
-  }, [appointmentId]);
+  }, [load]);
 
   const onSend = () => {
     const body = draft.trim();
@@ -44,7 +47,7 @@ export function AppointmentMessageThread({ appointmentId }: { appointmentId: str
     startTransition(async () => {
       const result = await sendAppointmentMessage({ appointmentId, body });
       if (!result.success) {
-        setError(result.error ?? "Could not send");
+        setError(result.error ?? t("messages.sendFailed"));
         return;
       }
       setDraft("");
@@ -54,11 +57,13 @@ export function AppointmentMessageThread({ appointmentId }: { appointmentId: str
 
   return (
     <div className="space-y-3 rounded-lg border border-line bg-surface p-4">
-      <p className="text-[10px] font-medium uppercase tracking-wider text-faint">Messages</p>
+      <p className="text-[10px] font-medium uppercase tracking-wider text-faint">
+        {t("messages.title")}
+      </p>
 
       <ul className="max-h-56 space-y-2 overflow-y-auto">
         {messages.length === 0 ? (
-          <li className="text-sm text-faint">No messages yet. Leave a note about this booking.</li>
+          <li className="text-sm text-faint">{t("messages.empty")}</li>
         ) : (
           messages.map((message) => (
             <li
@@ -71,10 +76,8 @@ export function AppointmentMessageThread({ appointmentId }: { appointmentId: str
               )}
             >
               <p className="text-[10px] uppercase tracking-wide text-faint">
-                {message.isMine
-                  ? "You"
-                  : (message.senderName ?? message.senderEmail)}{" "}
-                · {new Date(message.sentAt).toLocaleString()}
+                {message.isMine ? t("common.you") : (message.senderName ?? message.senderEmail)}{" "}
+                · {new Date(message.sentAt).toLocaleString(localeTag(locale))}
               </p>
               <p className="mt-1 whitespace-pre-wrap">{message.body}</p>
             </li>
@@ -86,13 +89,13 @@ export function AppointmentMessageThread({ appointmentId }: { appointmentId: str
         <Textarea
           value={draft}
           onChange={(event) => setDraft(event.target.value)}
-          placeholder="Write a message…"
+          placeholder={t("messages.placeholder")}
           rows={2}
         />
         <div className="flex justify-end">
           <Button size="sm" disabled={isPending || !draft.trim()} onClick={onSend}>
             <Send className="h-3.5 w-3.5" />
-            Send
+            {t("common.send")}
           </Button>
         </div>
       </div>

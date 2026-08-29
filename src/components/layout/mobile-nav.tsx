@@ -5,14 +5,25 @@ import { usePathname } from "next/navigation";
 import { Plus } from "lucide-react";
 
 import { adminNav, customerNav, isActive } from "@/components/layout/nav-items";
+import { useI18n } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 
 /** Bottom bar for viewports below `md`, where the sidebar is hidden. */
 export function MobileNav({ variant = "customer" }: { variant?: "customer" | "admin" }) {
   const pathname = usePathname();
+  const { t } = useI18n();
   const admin = variant === "admin";
-  // Booking gets the floating action button instead of a tab, so drop it here.
   const links = admin ? adminNav : customerNav.filter((link) => link.href !== "/book");
+  const shorts: Record<string, string> = {
+    "/dashboard": t("nav.dashboardShort"),
+    "/book": t("nav.book"),
+    "/appointments": t("nav.appointmentsShort"),
+    "/settings": t("nav.settings"),
+    "/admin": t("nav.overview"),
+    "/admin/calendar": t("nav.calendar"),
+    "/admin/appointments": t("nav.adminAppointmentsShort"),
+    "/admin/services": t("nav.servicesShort"),
+  };
 
   return (
     <nav className="fixed inset-x-0 bottom-0 z-40 border-t border-line bg-surface/95 backdrop-blur md:hidden">
@@ -32,7 +43,7 @@ export function MobileNav({ variant = "customer" }: { variant?: "customer" | "ad
               )}
             >
               <Icon className="h-5 w-5" />
-              {link.short}
+              {shorts[link.href] ?? link.short}
               <span
                 className={cn("h-1 w-1 rounded-full", active ? "bg-gold" : "bg-transparent")}
               />
@@ -44,7 +55,7 @@ export function MobileNav({ variant = "customer" }: { variant?: "customer" | "ad
       {admin ? null : (
         <Link
           href="/book"
-          aria-label="Book a cleaning"
+          aria-label={t("nav.bookAria")}
           className="bg-gold-gradient absolute -top-6 right-5 flex h-12 w-12 items-center justify-center rounded-full text-ink shadow-lg shadow-gold/20 transition-transform hover:scale-105"
         >
           <Plus className="h-5 w-5" strokeWidth={2.5} />

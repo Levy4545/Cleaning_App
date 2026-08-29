@@ -11,6 +11,8 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StarDisplay } from "@/components/ui/star-rating";
 import { StatusBadge, statusTheme } from "@/components/ui/status-badge";
+import { localeTag, translateCatalogName } from "@/i18n/format";
+import { useI18n } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 import { formatDeliveryMode, formatPriceRange, formatSlotRange } from "@/lib/format";
 import { ServiceIcon } from "@/lib/service-icon";
@@ -29,23 +31,6 @@ export type AppointmentRow = {
   review: { rating: number; comment: string | null } | null;
 };
 
-const FILTERS = [
-  { id: "ALL", label: "All", match: () => true },
-  { id: "PENDING", label: "Pending", match: (s: string) => s === "PENDING" },
-  {
-    id: "ACTIVE",
-    label: "Approved",
-    match: (s: string) => s === "APPROVED" || s === "ASSIGNED" || s === "IN_PROGRESS",
-  },
-  { id: "COMPLETED", label: "Completed", match: (s: string) => s === "COMPLETED" },
-  {
-    id: "CLOSED",
-    label: "Cancelled",
-    match: (s: string) =>
-      s === "REJECTED" || s === "CANCELLED_BY_USER" || s === "CANCELLED_BY_ADMIN",
-  },
-];
-
 const CLOSED_STATUSES = ["REJECTED", "CANCELLED_BY_USER", "CANCELLED_BY_ADMIN"];
 const CANCELLABLE = ["PENDING", "APPROVED"];
 
@@ -56,20 +41,38 @@ const CANCELLABLE = ["PENDING", "APPROVED"];
  * @returns The rendered booking list or empty state.
  */
 export function AppointmentList({ rows }: { rows: AppointmentRow[] }) {
+  const { t } = useI18n();
   const [filter, setFilter] = useState("ALL");
 
-  const active = FILTERS.find((f) => f.id === filter) ?? FILTERS[0];
+  const filters = [
+    { id: "ALL", label: t("appointments.filterAll"), match: () => true },
+    { id: "PENDING", label: t("appointments.filterPending"), match: (s: string) => s === "PENDING" },
+    {
+      id: "ACTIVE",
+      label: t("appointments.filterApproved"),
+      match: (s: string) => s === "APPROVED" || s === "ASSIGNED" || s === "IN_PROGRESS",
+    },
+    { id: "COMPLETED", label: t("appointments.filterCompleted"), match: (s: string) => s === "COMPLETED" },
+    {
+      id: "CLOSED",
+      label: t("appointments.filterCancelled"),
+      match: (s: string) =>
+        s === "REJECTED" || s === "CANCELLED_BY_USER" || s === "CANCELLED_BY_ADMIN",
+    },
+  ];
+
+  const active = filters.find((f) => f.id === filter) ?? filters[0];
   const visible = rows.filter((row) => active.match(row.status));
 
   if (rows.length === 0) {
     return (
       <EmptyState
         icon={CalendarPlus}
-        title="No bookings yet"
-        description="Request your first cleaning and track its progress here."
+        title={t("appointments.emptyTitle")}
+        description={t("appointments.emptyBody")}
         action={
           <ButtonLink href="/book" size="sm">
-            Book a cleaning
+            {t("dashboard.bookCta")}
           </ButtonLink>
         }
       />
@@ -79,7 +82,7 @@ export function AppointmentList({ rows }: { rows: AppointmentRow[] }) {
   return (
     <div className="space-y-5">
       <div className="flex flex-wrap gap-2">
-        {FILTERS.map((item) => {
+        {filters.map((item) => {
           const count = rows.filter((row) => item.match(row.status)).length;
           const selected = item.id === filter;
 
@@ -111,7 +114,7 @@ export function AppointmentList({ rows }: { rows: AppointmentRow[] }) {
       </div>
 
       {visible.length === 0 ? (
-        <p className="py-8 text-center text-sm text-ash">Nothing in this filter.</p>
+        <p className="py-8 text-center text-sm text-ash">{t("appointments.emptyFilter")}</p>
       ) : (
         <ul className="space-y-3">
           {visible.map((row) => (
@@ -130,13 +133,14 @@ export function AppointmentList({ rows }: { rows: AppointmentRow[] }) {
  * @returns The rendered appointment card
  */
 function AppointmentCard({ row }: { row: AppointmentRow }) {
+  const { t, locale } = useI18n();
   const theme = statusTheme(row.status);
   const closed = CLOSED_STATUSES.includes(row.status);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
 
   const onCancel = () => {
-    if (!window.confirm("Cancel this booking? The time window will open again.")) {
+    if (!window.confirm(t("appointments.cancelConfirm"))) {
       return;
     }
     setError(null);
@@ -147,6 +151,8 @@ function AppointmentCard({ row }: { row: AppointmentRow }) {
       }
     });
   };
+
+  const requestedWhen = new Date(row.createdAt).toLocaleDateString(localeTag(locale));
 
   return (
     <li
@@ -164,25 +170,27 @@ function AppointmentCard({ row }: { row: AppointmentRow }) {
           </span>
 
           <div className="min-w-0 flex-1">
-            <p className="font-display text-lg text-bone">{row.serviceName}</p>
+            <p className="font-display text-lg text-bone">
+              {translateCatalogName(t, row.serviceName)}
+            </p>
             <p className={cn("mt-0.5 text-sm text-ash", closed && "line-through")}>
-              {formatDeliveryMode(row.deliveryMode)} ·{" "}
+              {formatDeliveryMode(row.deliveryMode, t)} ·{" "}
               {row.slotStart && row.slotEnd
-                ? formatSlotRange(row.slotStart, row.slotEnd)
-                : `Requested ${new Date(row.createdAt).toLocaleDateString()}`}
+                ? formatSlotRange(row.slotStart, row.slotEnd, locale)
+                : t("appointments.requested", { when: requestedWhen })}
             </p>
           </div>
 
           <div className="flex flex-col items-end gap-2">
             <StatusBadge status={row.status} />
             <span className="font-display text-lg text-gold">
-              {formatPriceRange(row.priceMin, row.priceMax)}
+              {formatPriceRange(row.priceMin, row.priceMax, locale)}
             </span>
           </div>
         </div>
 
         {row.statusNote && (row.status === "REJECTED" || row.status === "CANCELLED_BY_ADMIN") ? (
-          <Alert className="mt-4" title="Message from the shop">
+          <Alert className="mt-4" title={t("appointments.shopMessage")}>
             {row.statusNote}
           </Alert>
         ) : null}
@@ -191,7 +199,7 @@ function AppointmentCard({ row }: { row: AppointmentRow }) {
           <div className="mt-4 flex flex-wrap items-center gap-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
             <StarDisplay rating={row.review.rating} />
             <span className="text-sm text-ash">
-              {row.review.comment ? row.review.comment : "Thanks for rating this job."}
+              {row.review.comment ? row.review.comment : t("appointments.thanksRating")}
             </span>
           </div>
         ) : null}
@@ -209,7 +217,7 @@ function AppointmentCard({ row }: { row: AppointmentRow }) {
               disabled={isPending}
               onClick={onCancel}
             >
-              {isPending ? "Cancelling…" : "Cancel booking"}
+              {isPending ? t("appointments.cancelling") : t("appointments.cancel")}
             </Button>
             {error ? <span className="text-sm text-red-400">{error}</span> : null}
           </div>

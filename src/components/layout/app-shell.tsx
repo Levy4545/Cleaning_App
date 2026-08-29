@@ -1,6 +1,7 @@
 import { type ReactNode } from "react";
 
 import { AppSidebar, Avatar, type ShellUser } from "@/components/layout/app-sidebar";
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { Logo } from "@/components/layout/logo";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { NotificationBell } from "@/components/notifications/notification-bell";
@@ -41,6 +42,7 @@ export function AppShell({
             </div>
 
             <div className="ml-auto flex items-center gap-2">
+              <LanguageSwitcher />
               {user ? <NotificationBell /> : null}
               {actions}
               {user ? <Avatar name={user.name} email={user.email} className="md:hidden" /> : null}

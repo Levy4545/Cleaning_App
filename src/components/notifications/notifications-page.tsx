@@ -7,6 +7,8 @@ import { Bell } from "lucide-react";
 import { markAllAsRead, markNotificationAsRead } from "@/actions/notifications";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
+import { localeTag } from "@/i18n/format";
+import { useI18n } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 
 export type NotificationListItem = {
@@ -26,14 +28,15 @@ export function NotificationsPageClient({
   items: NotificationListItem[];
   unreadCount: number;
 }) {
+  const { t, locale } = useI18n();
   const [isPending, startTransition] = useTransition();
 
   if (items.length === 0) {
     return (
       <EmptyState
         icon={Bell}
-        title="No notifications"
-        description="Booking updates and messages will show up here."
+        title={t("notifications.emptyTitle")}
+        description={t("notifications.emptyBody")}
       />
     );
   }
@@ -42,7 +45,9 @@ export function NotificationsPageClient({
     <div className="space-y-4">
       <div className="flex items-center justify-between gap-3">
         <p className="text-sm text-ash">
-          {unreadCount > 0 ? `${unreadCount} unread` : "All caught up"}
+          {unreadCount > 0
+            ? t("notifications.unread", { n: unreadCount })
+            : t("notifications.allCaughtUp")}
         </p>
         <Button
           variant="ghost"
@@ -54,7 +59,7 @@ export function NotificationsPageClient({
             })
           }
         >
-          Mark all read
+          {t("notifications.markAll")}
         </Button>
       </div>
 
@@ -65,10 +70,10 @@ export function NotificationsPageClient({
             <>
               <div className="flex flex-wrap items-start justify-between gap-2">
                 <p className={cn("text-sm", unread ? "font-medium text-bone" : "text-ash")}>
-                  {item.subject ?? "Update"}
+                  {item.subject ?? t("notifications.update")}
                 </p>
                 <time className="text-xs text-faint">
-                  {new Date(item.createdAt).toLocaleString()}
+                  {new Date(item.createdAt).toLocaleString(localeTag(locale))}
                 </time>
               </div>
               <p className="mt-1 whitespace-pre-wrap text-sm text-faint">{item.body}</p>

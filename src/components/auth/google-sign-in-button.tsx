@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/client";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
+import { useI18n } from "@/i18n/provider";
 import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 
 type GoogleSignInButtonProps = {
@@ -45,6 +46,7 @@ function GoogleIcon() {
  * @returns The Google sign-in button and any authentication error message
  */
 export function GoogleSignInButton({ redirectTo }: GoogleSignInButtonProps) {
+  const { t } = useI18n();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -85,7 +87,7 @@ export function GoogleSignInButton({ redirectTo }: GoogleSignInButtonProps) {
         disabled={loading}
       >
         <GoogleIcon />
-        {loading ? "Redirecting..." : "Continue with Google"}
+        {loading ? t("auth.redirecting") : t("auth.continueGoogle")}
       </Button>
       {error ? <Alert>{error}</Alert> : null}
     </div>

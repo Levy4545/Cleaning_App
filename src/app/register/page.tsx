@@ -1,12 +1,12 @@
 import { AuthLayout } from "@/components/auth/auth-layout";
 import { RegisterForm } from "@/components/auth/register-form";
+import { getTranslator } from "@/i18n/server";
 
-export default function RegisterPage() {
+export default async function RegisterPage() {
+  const { t } = await getTranslator();
+
   return (
-    <AuthLayout
-      quote="The details are not the details. They make the design."
-      attribution="Charles Eames"
-    >
+    <AuthLayout quote={t("auth.registerQuote")} attribution={t("auth.registerAttribution")}>
       <RegisterForm />
     </AuthLayout>
   );

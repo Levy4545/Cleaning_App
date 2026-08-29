@@ -5,6 +5,7 @@ import { BookingForm } from "@/components/booking/booking-form";
 import { getDefaultShopId } from "@/lib/tenancy/get-shop";
 import { listActiveServices } from "@/db/queries/services";
 import { listOpenSlots } from "@/db/queries/appointments";
+import { getTranslator } from "@/i18n/server";
 
 export default async function BookPage({
   searchParams,
@@ -14,6 +15,7 @@ export default async function BookPage({
   await syncUserFromAuth();
   const user = await requireUser();
   const { service: initialServiceId } = await searchParams;
+  const { t } = await getTranslator();
 
   const shopId = await getDefaultShopId();
   const [services, slots] = await Promise.all([
@@ -22,12 +24,7 @@ export default async function BookPage({
   ]);
 
   return (
-    <AppShell
-      variant="customer"
-      user={user}
-      title="Book a cleaning"
-      description="Four quick steps. An admin confirms your request."
-    >
+    <AppShell variant="customer" user={user} title={t("book.title")} description={t("book.description")}>
       <BookingForm
         initialServiceId={initialServiceId}
         services={services.map((s) => ({

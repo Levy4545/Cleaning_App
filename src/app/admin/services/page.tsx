@@ -7,10 +7,12 @@ import {
 import { requireAdmin } from "@/lib/auth/guards";
 import { getDefaultShopId } from "@/lib/tenancy/get-shop";
 import { listAllServices, listCategories } from "@/db/queries/services";
+import { getTranslator } from "@/i18n/server";
 
 export default async function AdminServicesPage() {
   const admin = await requireAdmin();
   const shopId = await getDefaultShopId();
+  const { t } = await getTranslator();
 
   const [categoryRows, serviceRows] = await Promise.all([
     listCategories(shopId),
@@ -46,8 +48,8 @@ export default async function AdminServicesPage() {
     <AppShell
       variant="admin"
       user={admin}
-      title="Services"
-      description="Manage categories and the bookable catalog."
+      title={t("admin.servicesTitle")}
+      description={t("admin.servicesBody")}
     >
       <ServicesCatalog categories={categories} services={services} />
     </AppShell>

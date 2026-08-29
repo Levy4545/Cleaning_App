@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
 
+import { LanguageSwitcher } from "@/components/layout/language-switcher";
 import { Logo, LogoMark } from "@/components/layout/logo";
 
 export function AuthLayout({
@@ -32,7 +33,10 @@ export function AuthLayout({
 
       <section className="flex items-center justify-center bg-surface px-4 py-12 sm:px-8">
         <div className="w-full max-w-md">
-          <Logo href="/" className="mb-8 lg:hidden" />
+          <div className="mb-8 flex items-center justify-between gap-3 lg:justify-end">
+            <Logo href="/" className="lg:hidden" />
+            <LanguageSwitcher />
+          </div>
           {children}
         </div>
       </section>

@@ -4,6 +4,7 @@ import { requireAdmin } from "@/lib/auth/guards";
 import { getDefaultShopId } from "@/lib/tenancy/get-shop";
 import { listShopAppointmentsInbox } from "@/db/queries/appointments";
 import { formatItemType, formatPriceRange, formatSlotRange } from "@/lib/format";
+import { getTranslator } from "@/i18n/server";
 
 /**
  * Renders the administrator appointments inbox with appointment totals and pending count.
@@ -11,19 +12,20 @@ import { formatItemType, formatPriceRange, formatSlotRange } from "@/lib/format"
 export default async function AdminAppointmentsPage() {
   const admin = await requireAdmin();
   const shopId = await getDefaultShopId();
+  const { t, locale } = await getTranslator();
   const appointments = await listShopAppointmentsInbox(shopId);
 
   const rows: InboxRow[] = appointments.map((appointment) => ({
     id: appointment.id,
     status: appointment.status,
-    serviceName: appointment.serviceName ?? "Service",
+    serviceName: appointment.serviceName ?? t("common.service"),
     customerName: appointment.customerName ?? null,
     customerEmail: appointment.customerEmail ?? appointment.customerId,
     customerPhone: appointment.customerPhone ?? null,
     deliveryMode: appointment.deliveryMode,
     window:
       appointment.slotStartsAt && appointment.slotEndsAt
-        ? formatSlotRange(appointment.slotStartsAt, appointment.slotEndsAt)
+        ? formatSlotRange(appointment.slotStartsAt, appointment.slotEndsAt, locale)
         : null,
     requestedAt: new Date(appointment.createdAt).toISOString(),
     notes: appointment.notes ?? null,
@@ -39,13 +41,16 @@ export default async function AdminAppointmentsPage() {
         ? appointment.items
             .map((item) => {
               const qty = `× ${item.quantity}`;
-              return item.itemType ? `${formatItemType(item.itemType)} ${qty}` : `Item ${qty}`;
+              return item.itemType
+                ? `${formatItemType(item.itemType, t)} ${qty}`
+                : t("common.itemQty", { n: item.quantity });
             })
             .join(", ")
-        : "Not specified",
+        : t("common.notSpecified"),
     priceLabel: formatPriceRange(
       appointment.servicePriceMin ?? "0",
       appointment.servicePriceMax ?? appointment.servicePriceMin ?? "0",
+      locale,
     ),
     amount: appointment.paymentAmount ?? appointment.servicePriceMin ?? "0",
     paymentStatus: appointment.paymentStatus ?? "UNPAID",
@@ -67,8 +72,8 @@ export default async function AdminAppointmentsPage() {
     <AppShell
       variant="admin"
       user={admin}
-      title="Appointments"
-      description={`${rows.length} total · ${pending} awaiting review`}
+      title={t("admin.appointmentsTitle")}
+      description={t("admin.appointmentsCount", { total: rows.length, pending })}
     >
       <AppointmentsInbox rows={rows} />
     </AppShell>
