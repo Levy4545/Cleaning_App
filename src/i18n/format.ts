@@ -1,5 +1,18 @@
+import {
+  catalogTranslatedDescription,
+  catalogTranslatedName,
+  type CatalogTranslationMap,
+} from "@/i18n/catalog-map";
 import type { MessageKey, Translator } from "@/i18n/dictionary";
 import { LOCALE_TAGS, type Locale } from "@/i18n/locales";
+
+export type CatalogTranslateOptions = {
+  locale?: Locale;
+  catalog?: CatalogTranslationMap;
+  serviceId?: string;
+  /** English name used to look up a stored description when the source text is empty. */
+  englishName?: string;
+};
 
 const STATUS_KEYS: Record<string, MessageKey> = {
   PENDING: "status.PENDING",
@@ -32,7 +45,13 @@ const CATALOG_KEYS: Record<string, Parameters<Translator["t"]>[0]> = {
   fabric: "catalog.fabric",
 };
 
-export function translateCatalogName(t: Translator["t"], name: string) {
+export function translateCatalogName(
+  t: Translator["t"],
+  name: string,
+  options?: CatalogTranslateOptions,
+) {
+  const stored = catalogTranslatedName(options?.catalog, options?.locale, name, options?.serviceId);
+  if (stored) return stored;
   const key = CATALOG_KEYS[name.trim().toLowerCase()];
   return key ? t(key) : name;
 }
@@ -44,7 +63,18 @@ const CATALOG_DESCRIPTION_KEYS: Record<string, Parameters<Translator["t"]>[0]> =
   "single or dining chair cleaning": "catalog.chairCleaningDesc",
 };
 
-export function translateCatalogDescription(t: Translator["t"], description: string | null) {
+export function translateCatalogDescription(
+  t: Translator["t"],
+  description: string | null,
+  options?: CatalogTranslateOptions,
+) {
+  const stored = catalogTranslatedDescription(
+    options?.catalog,
+    options?.locale,
+    options?.englishName ?? description ?? "",
+    options?.serviceId,
+  );
+  if (stored) return stored;
   if (!description) return description;
   const key = CATALOG_DESCRIPTION_KEYS[description.trim().toLowerCase()];
   return key ? t(key) : description;

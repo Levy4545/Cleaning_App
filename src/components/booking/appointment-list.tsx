@@ -11,7 +11,7 @@ import { Button, ButtonLink } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { StarDisplay } from "@/components/ui/star-rating";
 import { StatusBadge, statusTheme } from "@/components/ui/status-badge";
-import { localeTag, translateCatalogName } from "@/i18n/format";
+import { localeTag } from "@/i18n/format";
 import { useI18n } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 import { formatDeliveryMode, formatPriceRange, formatSlotRange } from "@/lib/format";
@@ -133,7 +133,7 @@ export function AppointmentList({ rows }: { rows: AppointmentRow[] }) {
  * @returns The rendered appointment card
  */
 function AppointmentCard({ row }: { row: AppointmentRow }) {
-  const { t, locale } = useI18n();
+  const { t, locale, catalogName } = useI18n();
   const theme = statusTheme(row.status);
   const closed = CLOSED_STATUSES.includes(row.status);
   const [error, setError] = useState<string | null>(null);
@@ -171,7 +171,7 @@ function AppointmentCard({ row }: { row: AppointmentRow }) {
 
           <div className="min-w-0 flex-1">
             <p className="font-display text-lg text-bone">
-              {translateCatalogName(t, row.serviceName)}
+              {catalogName(row.serviceName)}
             </p>
             <p className={cn("mt-0.5 text-sm text-ash", closed && "line-through")}>
               {formatDeliveryMode(row.deliveryMode, t)} ·{" "}

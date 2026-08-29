@@ -18,13 +18,12 @@ import {
 import { findServiceById } from "@/db/queries/services";
 import { findUserById } from "@/db/queries/users";
 import { formatLongDate, formatMoney, formatSlotRange } from "@/lib/format";
-import { translateCatalogName } from "@/i18n/format";
 import { getTranslator } from "@/i18n/server";
 
 export default async function AdminHomePage() {
   const admin = await requireAdmin();
   const shopId = await getDefaultShopId();
-  const { t, locale } = await getTranslator();
+  const { t, locale, catalogName } = await getTranslator();
 
   const [appointments, slots] = await Promise.all([
     listAppointmentsForShop(shopId),
@@ -47,7 +46,7 @@ export default async function AdminHomePage() {
       return {
         id: appointment.id,
         status: appointment.status,
-        serviceName: translateCatalogName(t, service?.name ?? t("common.service")),
+        serviceName: catalogName(service?.name ?? t("common.service"), service?.id),
         customerName: customer?.name ?? null,
         customerEmail: customer?.email ?? t("common.customer"),
         window: slot ? formatSlotRange(slot.startsAt, slot.endsAt, locale) : t("admin.noWindow"),

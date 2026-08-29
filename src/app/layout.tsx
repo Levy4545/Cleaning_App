@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
 
 import { I18nProvider } from "@/i18n/provider";
-import { getRequestLocale } from "@/i18n/server";
+import { getCatalogTranslationMap, getRequestLocale } from "@/i18n/server";
 
 import "./globals.css";
 
@@ -28,12 +28,17 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const locale = await getRequestLocale();
+  const [locale, catalog] = await Promise.all([
+    getRequestLocale(),
+    getCatalogTranslationMap(),
+  ]);
 
   return (
     <html lang={locale} className={`${inter.variable} ${playfair.variable}`}>
       <body className="min-h-screen bg-ink font-sans text-bone antialiased">
-        <I18nProvider initialLocale={locale}>{children}</I18nProvider>
+        <I18nProvider initialLocale={locale} catalog={catalog}>
+          {children}
+        </I18nProvider>
       </body>
     </html>
   );

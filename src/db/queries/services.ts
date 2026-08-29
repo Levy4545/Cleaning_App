@@ -1,7 +1,15 @@
 import { and, asc, count, eq } from "drizzle-orm";
 
 import { db } from "@/db";
-import { serviceCategories, services } from "@/db/schema";
+import { serviceCategories, serviceTranslations, services } from "@/db/schema";
+
+export type ServiceLocale = "ro" | "hu";
+
+export type ServiceTranslationInput = {
+  locale: ServiceLocale;
+  name: string;
+  description: string | null;
+};
 
 /**
  * Lists all active services for a shop in ascending name order.
@@ -129,6 +137,36 @@ export async function deleteCategory(categoryId: string, shopId: string) {
   return row ?? null;
 }
 
+export async function listServiceTranslationsForShop(shopId: string) {
+  return db
+    .select({
+      serviceId: serviceTranslations.serviceId,
+      locale: serviceTranslations.locale,
+      name: serviceTranslations.name,
+      description: serviceTranslations.description,
+      englishName: services.name,
+    })
+    .from(serviceTranslations)
+    .innerJoin(services, eq(serviceTranslations.serviceId, services.id))
+    .where(eq(services.shopId, shopId));
+}
+
+export async function replaceServiceTranslations(
+  serviceId: string,
+  rows: ServiceTranslationInput[],
+) {
+  await db.delete(serviceTranslations).where(eq(serviceTranslations.serviceId, serviceId));
+  if (rows.length === 0) return;
+  await db.insert(serviceTranslations).values(
+    rows.map((row) => ({
+      serviceId,
+      locale: row.locale,
+      name: row.name,
+      description: row.description,
+    })),
+  );
+}
+
 export async function createService(data: {
   shopId: string;
   categoryId: string;
@@ -140,8 +178,13 @@ export async function createService(data: {
   priceMin: string;
   priceMax: string;
   isActive?: boolean;
+  translations?: ServiceTranslationInput[];
 }) {
-  const [row] = await db.insert(services).values(data).returning();
+  const { translations, ...serviceData } = data;
+  const [row] = await db.insert(services).values(serviceData).returning();
+  if (row && translations) {
+    await replaceServiceTranslations(row.id, translations);
+  }
   return row;
 }
 
@@ -157,6 +200,7 @@ export async function updateService(data: {
   priceMin: string;
   priceMax: string;
   isActive: boolean;
+  translations?: ServiceTranslationInput[];
 }) {
   const [row] = await db
     .update(services)
@@ -173,6 +217,9 @@ export async function updateService(data: {
     })
     .where(and(eq(services.id, data.serviceId), eq(services.shopId, data.shopId)))
     .returning();
+  if (row && data.translations) {
+    await replaceServiceTranslations(row.id, data.translations);
+  }
   return row ?? null;
 }
 

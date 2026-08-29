@@ -31,8 +31,11 @@ import { formatDeliveryMode, formatItemType, formatPriceRange } from "@/lib/form
 import { ServiceIcon } from "@/lib/service-icon";
 import { slugify } from "@/lib/slugify";
 import { cn } from "@/lib/utils";
+import { LocaleFlag } from "@/components/layout/locale-flag";
+import { createTranslator } from "@/i18n/dictionary";
 import { translateCatalogName, translateCatalogDescription } from "@/i18n/format";
 import { useI18n } from "@/i18n/provider";
+import type { Locale } from "@/i18n/locales";
 
 export type CatalogCategory = {
   id: string;
@@ -46,6 +49,10 @@ export type CatalogService = {
   categoryId: string;
   name: string;
   description: string | null;
+  nameRo: string;
+  descriptionRo: string;
+  nameHu: string;
+  descriptionHu: string;
   deliveryModes: string[];
   itemTypeOptions: string[];
   durationMinutes: number;
@@ -65,6 +72,10 @@ type ServiceFormState = {
   categoryId: string;
   name: string;
   description: string;
+  nameRo: string;
+  descriptionRo: string;
+  nameHu: string;
+  descriptionHu: string;
   deliveryModes: DeliveryMode[];
   itemTypeOptionsText: string;
   durationMinutes: string;
@@ -79,6 +90,10 @@ const emptyServiceForm = (categoryId: string): ServiceFormState => ({
   categoryId,
   name: "",
   description: "",
+  nameRo: "",
+  descriptionRo: "",
+  nameHu: "",
+  descriptionHu: "",
   deliveryModes: ["DROP_OFF"],
   itemTypeOptionsText: "",
   durationMinutes: "60",
@@ -86,6 +101,17 @@ const emptyServiceForm = (categoryId: string): ServiceFormState => ({
   priceMax: "0.00",
   isActive: true,
 });
+
+function fallbackLocaleCopy(name: string, description: string | null, locale: Locale) {
+  const { t } = createTranslator(locale);
+  const translatedName = translateCatalogName(t, name);
+  const translatedDescription = translateCatalogDescription(t, description);
+  return {
+    name: translatedName !== name ? translatedName : "",
+    description:
+      translatedDescription && translatedDescription !== description ? translatedDescription : "",
+  };
+}
 
 function parseItemTypeOptions(value: string): string[] {
   return value
@@ -108,7 +134,7 @@ export function ServicesCatalog({
   services: CatalogService[];
 }) {
   const router = useRouter();
-  const { t, locale } = useI18n();
+  const { t, locale, catalogName, catalogDescription } = useI18n();
   const [selectedCategoryId, setSelectedCategoryId] = useState<string | "all">(
     categories[0]?.id ?? "all",
   );
@@ -181,11 +207,17 @@ export function ServicesCatalog({
   };
 
   const openEditService = (service: CatalogService) => {
+    const ro = fallbackLocaleCopy(service.name, service.description, "ro");
+    const hu = fallbackLocaleCopy(service.name, service.description, "hu");
     setEditingServiceId(service.id);
     setServiceForm({
       categoryId: service.categoryId,
       name: service.name,
       description: service.description ?? "",
+      nameRo: service.nameRo || ro.name,
+      descriptionRo: service.descriptionRo || ro.description,
+      nameHu: service.nameHu || hu.name,
+      descriptionHu: service.descriptionHu || hu.description,
       deliveryModes: service.deliveryModes.filter(
         (mode): mode is DeliveryMode => mode === "ON_SITE" || mode === "DROP_OFF",
       ),
@@ -367,7 +399,7 @@ export function ServicesCatalog({
                       <div className="min-w-0 flex-1 space-y-1">
                         <div className="flex flex-wrap items-center gap-2">
                           <p className="font-medium text-bone">
-                            {translateCatalogName(t, service.name)}
+                            {catalogName(service.name, service.id)}
                           </p>
                           <span
                             className={cn(
@@ -393,8 +425,8 @@ export function ServicesCatalog({
                           {service.itemTypeOptions.length > 0
                             ? ` · ${service.itemTypeOptions.map((item) => formatItemType(item, t)).join(", ")}`
                             : ` · ${t("catalog.noItemTypes")}`}
-                          {service.description
-                            ? ` · ${translateCatalogDescription(t, service.description)}`
+                          {catalogDescription(service.description, service.id, service.name)
+                            ? ` · ${catalogDescription(service.description, service.id, service.name)}`
                             : ""}
                         </p>
                       </div>
@@ -531,6 +563,10 @@ export function ServicesCatalog({
                 categoryId: serviceForm.categoryId,
                 name: serviceForm.name,
                 description: serviceForm.description || undefined,
+                nameRo: serviceForm.nameRo || undefined,
+                descriptionRo: serviceForm.descriptionRo || undefined,
+                nameHu: serviceForm.nameHu || undefined,
+                descriptionHu: serviceForm.descriptionHu || undefined,
                 deliveryModes: serviceForm.deliveryModes,
                 itemTypeOptions: parseItemTypeOptions(serviceForm.itemTypeOptionsText),
                 durationMinutes: Number(serviceForm.durationMinutes),
@@ -569,7 +605,7 @@ export function ServicesCatalog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="service-name">{t("catalog.serviceName")}</Label>
+              <Label htmlFor="service-name">{t("catalog.nameEnglish")}</Label>
               <Input
                 id="service-name"
                 value={serviceForm.name}
@@ -582,7 +618,7 @@ export function ServicesCatalog({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="service-description">{t("catalog.description")}</Label>
+              <Label htmlFor="service-description">{t("catalog.descriptionEnglish")}</Label>
               <Textarea
                 id="service-description"
                 value={serviceForm.description}
@@ -591,6 +627,73 @@ export function ServicesCatalog({
                 }
                 placeholder={t("catalog.descriptionPlaceholder")}
               />
+            </div>
+
+            <div className="space-y-3 rounded-xl border border-line bg-elevated/50 p-3 sm:p-4">
+              <div>
+                <p className="text-sm font-medium text-bone">{t("catalog.translations")}</p>
+                <p className="text-xs text-faint">{t("catalog.translationsHint")}</p>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="service-name-ro" className="inline-flex items-center gap-2">
+                    <LocaleFlag locale="ro" />
+                    {t("catalog.nameRomanian")}
+                  </Label>
+                  <Input
+                    id="service-name-ro"
+                    value={serviceForm.nameRo}
+                    onChange={(event) =>
+                      setServiceForm((prev) => ({ ...prev, nameRo: event.target.value }))
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="service-name-hu" className="inline-flex items-center gap-2">
+                    <LocaleFlag locale="hu" />
+                    {t("catalog.nameHungarian")}
+                  </Label>
+                  <Input
+                    id="service-name-hu"
+                    value={serviceForm.nameHu}
+                    onChange={(event) =>
+                      setServiceForm((prev) => ({ ...prev, nameHu: event.target.value }))
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="service-description-ro" className="inline-flex items-center gap-2">
+                    <LocaleFlag locale="ro" />
+                    {t("catalog.descriptionRomanian")}
+                  </Label>
+                  <Textarea
+                    id="service-description-ro"
+                    value={serviceForm.descriptionRo}
+                    onChange={(event) =>
+                      setServiceForm((prev) => ({ ...prev, descriptionRo: event.target.value }))
+                    }
+                    rows={2}
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="service-description-hu" className="inline-flex items-center gap-2">
+                    <LocaleFlag locale="hu" />
+                    {t("catalog.descriptionHungarian")}
+                  </Label>
+                  <Textarea
+                    id="service-description-hu"
+                    value={serviceForm.descriptionHu}
+                    onChange={(event) =>
+                      setServiceForm((prev) => ({ ...prev, descriptionHu: event.target.value }))
+                    }
+                    rows={2}
+                  />
+                </div>
+              </div>
             </div>
 
             <div className="space-y-2">
@@ -723,7 +826,7 @@ function FormDrawer({
         role="dialog"
         aria-modal="true"
         aria-label={title}
-        className="max-h-[90vh] w-full max-w-lg overflow-y-auto rounded-xl border border-line bg-panel p-5 shadow-2xl sm:p-6"
+        className="max-h-[90vh] w-full max-w-xl overflow-y-auto rounded-xl border border-line bg-panel p-5 shadow-2xl sm:p-6"
       >
         <div className="mb-5 flex items-start justify-between gap-3">
           <h3 className="font-display text-xl text-bone">{title}</h3>

@@ -12,6 +12,7 @@ import {
   profiles,
   reviews,
   serviceCategories,
+  serviceTranslations,
   services,
   shopMembers,
   shops,
@@ -86,6 +87,14 @@ export const servicesRelations = relations(services, ({ one, many }) => ({
     references: [serviceCategories.id],
   }),
   appointments: many(appointments),
+  translations: many(serviceTranslations),
+}));
+
+export const serviceTranslationsRelations = relations(serviceTranslations, ({ one }) => ({
+  service: one(services, {
+    fields: [serviceTranslations.serviceId],
+    references: [services.id],
+  }),
 }));
 
 export const availabilitySlotsRelations = relations(availabilitySlots, ({ one, many }) => ({

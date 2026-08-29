@@ -6,7 +6,7 @@ import {
 } from "@/components/admin/services-catalog";
 import { requireAdmin } from "@/lib/auth/guards";
 import { getDefaultShopId } from "@/lib/tenancy/get-shop";
-import { listAllServices, listCategories } from "@/db/queries/services";
+import { listAllServices, listCategories, listServiceTranslationsForShop } from "@/db/queries/services";
 import { getTranslator } from "@/i18n/server";
 
 export default async function AdminServicesPage() {
@@ -14,23 +14,39 @@ export default async function AdminServicesPage() {
   const shopId = await getDefaultShopId();
   const { t } = await getTranslator();
 
-  const [categoryRows, serviceRows] = await Promise.all([
+  const [categoryRows, serviceRows, translationRows] = await Promise.all([
     listCategories(shopId),
     listAllServices(shopId),
+    listServiceTranslationsForShop(shopId),
   ]);
 
-  const services: CatalogService[] = serviceRows.map((service) => ({
-    id: service.id,
-    categoryId: service.categoryId,
-    name: service.name,
-    description: service.description,
-    deliveryModes: service.deliveryModes,
-    itemTypeOptions: service.itemTypeOptions ?? [],
-    durationMinutes: service.durationMinutes,
-    priceMin: service.priceMin,
-    priceMax: service.priceMax,
-    isActive: service.isActive,
-  }));
+  const translationsByService = new Map<string, { ro?: { name: string; description: string | null }; hu?: { name: string; description: string | null } }>();
+  for (const row of translationRows) {
+    if (row.locale !== "ro" && row.locale !== "hu") continue;
+    const current = translationsByService.get(row.serviceId) ?? {};
+    current[row.locale] = { name: row.name, description: row.description };
+    translationsByService.set(row.serviceId, current);
+  }
+
+  const services: CatalogService[] = serviceRows.map((service) => {
+    const locales = translationsByService.get(service.id);
+    return {
+      id: service.id,
+      categoryId: service.categoryId,
+      name: service.name,
+      description: service.description,
+      nameRo: locales?.ro?.name ?? "",
+      descriptionRo: locales?.ro?.description ?? "",
+      nameHu: locales?.hu?.name ?? "",
+      descriptionHu: locales?.hu?.description ?? "",
+      deliveryModes: service.deliveryModes,
+      itemTypeOptions: service.itemTypeOptions ?? [],
+      durationMinutes: service.durationMinutes,
+      priceMin: service.priceMin,
+      priceMax: service.priceMax,
+      isActive: service.isActive,
+    };
+  });
 
   const counts = new Map<string, number>();
   for (const service of services) {

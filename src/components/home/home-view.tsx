@@ -6,7 +6,6 @@ import { SiteHeader } from "@/components/layout/header";
 import { LogoMark } from "@/components/layout/logo";
 import { ButtonLink } from "@/components/ui/button";
 import { formatPriceRange } from "@/i18n/format";
-import { translateCatalogDescription, translateCatalogName } from "@/i18n/format";
 import { useI18n } from "@/i18n/provider";
 import { ServiceIcon } from "@/lib/service-icon";
 
@@ -20,7 +19,7 @@ export type HomeServiceCard = {
 };
 
 export function HomeView({ services }: { services: HomeServiceCard[] }) {
-  const { t, locale } = useI18n();
+  const { t, locale, catalogName, catalogDescription } = useI18n();
   const year = new Date().getFullYear();
 
   const steps = [
@@ -84,10 +83,10 @@ export function HomeView({ services }: { services: HomeServiceCard[] }) {
                   strokeWidth={1.25}
                 />
                 <h3 className="mt-5 font-display text-xl text-bone">
-                  {translateCatalogName(t, service.name)}
+                  {catalogName(service.name, service.id)}
                 </h3>
                 <p className="mt-2 min-h-10 text-sm leading-relaxed text-ash">
-                  {translateCatalogDescription(t, service.description) ??
+                  {catalogDescription(service.description, service.id, service.name) ??
                     t("home.defaultDescription")}
                 </p>
                 <div className="mt-5 flex items-end justify-between border-t border-line pt-4">
@@ -149,7 +148,7 @@ export function HomeView({ services }: { services: HomeServiceCard[] }) {
               >
                 <div className="min-w-0">
                   <p className="truncate text-sm font-medium text-bone">
-                    {translateCatalogName(t, service.name)}
+                    {catalogName(service.name, service.id)}
                   </p>
                   <p className="text-xs text-faint">
                     {t("common.minutesLong", { n: service.durationMinutes })}

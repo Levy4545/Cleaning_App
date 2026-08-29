@@ -22,7 +22,7 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { Input } from "@/components/ui/input";
 import { StarDisplay } from "@/components/ui/star-rating";
 import { StatusBadge, statusTheme } from "@/components/ui/status-badge";
-import { localeTag, translateCatalogName } from "@/i18n/format";
+import { localeTag } from "@/i18n/format";
 import { useI18n } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 import { formatDeliveryMode, formatMoney } from "@/lib/format";
@@ -56,7 +56,7 @@ function timelineProgress(status: string) {
 }
 
 export function AppointmentsInbox({ rows }: { rows: InboxRow[] }) {
-  const { t, locale } = useI18n();
+  const { t, locale, catalogName } = useI18n();
   const [query, setQuery] = useState("");
   const [selectedId, setSelectedId] = useState(rows[0]?.id ?? null);
 
@@ -126,7 +126,7 @@ export function AppointmentsInbox({ rows }: { rows: InboxRow[] }) {
                         {row.customerName ?? row.customerEmail}
                       </span>
                       <span className="block truncate text-xs text-faint">
-                        {translateCatalogName(t, row.serviceName)} ·{" "}
+                        {catalogName(row.serviceName)} ·{" "}
                         {new Date(row.requestedAt).toLocaleDateString(localeTag(locale), {
                           day: "numeric",
                           month: "short",
@@ -149,7 +149,7 @@ export function AppointmentsInbox({ rows }: { rows: InboxRow[] }) {
 }
 
 function InboxDetail({ row }: { row: InboxRow }) {
-  const { t, locale } = useI18n();
+  const { t, locale, catalogName } = useI18n();
   const reached = timelineProgress(row.status);
   const timeline = [
     { key: "REQUESTED", label: t("admin.timelineRequested") },
@@ -178,7 +178,7 @@ function InboxDetail({ row }: { row: InboxRow }) {
         <InfoTile
           icon={Sparkles}
           label={t("common.service")}
-          value={translateCatalogName(t, row.serviceName)}
+          value={catalogName(row.serviceName)}
         />
         <InfoTile
           icon={Truck}

@@ -57,10 +57,17 @@ export const updateCategorySchema = createCategorySchema.extend({
   categoryId: z.string().uuid(),
 });
 
+const optionalLocaleName = z.string().trim().max(100).optional();
+const optionalLocaleDescription = z.string().trim().max(500).optional();
+
 const serviceFieldsSchema = z.object({
   categoryId: z.string().uuid("Pick a category"),
   name: z.string().trim().min(2, "Name must be at least 2 characters").max(100),
   description: z.string().trim().max(500).optional(),
+  nameRo: optionalLocaleName,
+  descriptionRo: optionalLocaleDescription,
+  nameHu: optionalLocaleName,
+  descriptionHu: optionalLocaleDescription,
   deliveryModes: z.array(deliveryModeSchema).min(1, "Pick at least one delivery mode"),
   itemTypeOptions: z.array(itemTypeOptionSchema).max(20).default([]),
   durationMinutes: z.coerce

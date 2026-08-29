@@ -15,7 +15,7 @@ import { findSlotById, listAppointmentsForCustomer } from "@/db/queries/appointm
 import { findServiceById, listActiveServices } from "@/db/queries/services";
 import { ServiceIcon } from "@/lib/service-icon";
 import { formatDeliveryMode, formatSlotRange } from "@/lib/format";
-import { localeTag, translateCatalogName } from "@/i18n/format";
+import { localeTag } from "@/i18n/format";
 import { getTranslator } from "@/i18n/server";
 
 const OPEN_STATUSES = ["PENDING", "APPROVED", "ASSIGNED", "IN_PROGRESS"];
@@ -30,7 +30,7 @@ export default async function DashboardPage() {
   await syncUserFromAuth();
   const user = await requireUser();
   const shopId = await getDefaultShopId();
-  const { t, locale } = await getTranslator();
+  const { t, locale, catalogName } = await getTranslator();
 
   const [appointments, services] = await Promise.all([
     listAppointmentsForCustomer(user.id, shopId),
@@ -93,7 +93,7 @@ export default async function DashboardPage() {
 
             {next ? (
               <NextAppointment
-                serviceName={translateCatalogName(t, next.service?.name ?? t("common.service"))}
+                serviceName={catalogName(next.service?.name ?? t("common.service"), next.service?.id)}
                 deliveryMode={formatDeliveryMode(next.appointment.deliveryMode, t)}
                 status={next.appointment.status}
                 window={
@@ -134,7 +134,7 @@ export default async function DashboardPage() {
                       strokeWidth={1.25}
                     />
                     <span className="text-xs leading-tight text-ash">
-                      {translateCatalogName(t, service.name)}
+                      {catalogName(service.name, service.id)}
                     </span>
                   </Link>
                 ))}
@@ -168,7 +168,7 @@ export default async function DashboardPage() {
                     className={`h-2 w-2 shrink-0 rounded-full ${statusTheme(appointment.status).accent}`}
                   />
                   <span className="min-w-0 flex-1 truncate text-sm text-bone">
-                    {translateCatalogName(t, service?.name ?? t("common.service"))}
+                    {catalogName(service?.name ?? t("common.service"), service?.id)}
                   </span>
                   <span className="text-xs text-faint">
                     {slot

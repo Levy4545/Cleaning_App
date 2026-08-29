@@ -3,6 +3,7 @@
 import { createContext, useCallback, useContext, useMemo, useState, type ReactNode } from "react";
 import { useRouter } from "next/navigation";
 
+import { emptyCatalogTranslationMap, type CatalogTranslationMap } from "@/i18n/catalog-map";
 import { setLocaleCookie } from "@/i18n/actions";
 import {
   createTranslator,
@@ -10,9 +11,17 @@ import {
   type TranslateVars,
   type Translator,
 } from "@/i18n/dictionary";
+import { translateCatalogDescription, translateCatalogName } from "@/i18n/format";
 import { LOCALE_COOKIE, parseLocale, type Locale } from "@/i18n/locales";
 
 type I18nContextValue = Translator & {
+  catalog: CatalogTranslationMap;
+  catalogName: (name: string, serviceId?: string) => string;
+  catalogDescription: (
+    description: string | null,
+    serviceId?: string,
+    englishName?: string,
+  ) => string | null;
   setLocale: (locale: Locale) => void;
 };
 
@@ -20,9 +29,11 @@ const I18nContext = createContext<I18nContextValue | null>(null);
 
 export function I18nProvider({
   initialLocale,
+  catalog = emptyCatalogTranslationMap(),
   children,
 }: {
   initialLocale: Locale;
+  catalog?: CatalogTranslationMap;
   children: ReactNode;
 }) {
   const router = useRouter();
@@ -44,9 +55,23 @@ export function I18nProvider({
   const value = useMemo(
     () => ({
       ...translator,
+      catalog,
+      catalogName: (name: string, serviceId?: string) =>
+        translateCatalogName(translator.t, name, { locale, catalog, serviceId }),
+      catalogDescription: (
+        description: string | null,
+        serviceId?: string,
+        englishName?: string,
+      ) =>
+        translateCatalogDescription(translator.t, description, {
+          locale,
+          catalog,
+          serviceId,
+          englishName,
+        }),
       setLocale,
     }),
-    [translator, setLocale],
+    [translator, catalog, locale, setLocale],
   );
 
   return <I18nContext.Provider value={value}>{children}</I18nContext.Provider>;

@@ -14,7 +14,7 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { inputClasses } from "@/components/ui/input";
-import { localeTag, translateCatalogName } from "@/i18n/format";
+import { localeTag } from "@/i18n/format";
 import { useI18n } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 
@@ -166,7 +166,7 @@ export function WeekCalendar({
   bookings?: CalendarBooking[];
 }) {
   const router = useRouter();
-  const { t, locale } = useI18n();
+  const { t, locale, catalogName } = useI18n();
   const toolLabels: Record<CalendarTool, string> = {
     FREE: t("calendar.freeSlot"),
     OCCUPIED: t("calendar.occupied"),
@@ -405,7 +405,7 @@ export function WeekCalendar({
                               ? "border-sky-500/40 bg-sky-500/15 text-sky-200 hover:bg-sky-500/25"
                               : "border-amber-500/40 bg-amber-500/15 text-amber-200 hover:bg-amber-500/25",
                           )}
-                          title={`${translateCatalogName(t, booking.serviceName)} · ${booking.customerEmail}`}
+                          title={`${catalogName(booking.serviceName)} · ${booking.customerEmail}`}
                         >
                           <span className="block font-medium">
                             {start.toLocaleTimeString(localeTag(locale), {
@@ -419,7 +419,7 @@ export function WeekCalendar({
                             })}
                           </span>
                           <span className="block truncate opacity-80">
-                            {translateCatalogName(t, booking.serviceName)}
+                            {catalogName(booking.serviceName)}
                           </span>
                         </button>
                       );

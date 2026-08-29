@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
-import { localeTag, translateCatalogName } from "@/i18n/format";
+import { localeTag } from "@/i18n/format";
 import { useI18n } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 import {
@@ -89,7 +89,7 @@ export function BookingForm({
   initialServiceId?: string;
 }) {
   const router = useRouter();
-  const { t, locale } = useI18n();
+  const { t, locale, catalogName } = useI18n();
   const initialService =
     services.find((s) => s.id === initialServiceId) ?? services[0] ?? undefined;
 
@@ -240,7 +240,7 @@ export function BookingForm({
                       />
                       <span className="min-w-0 flex-1">
                         <span className="block text-sm font-medium text-bone">
-                          {translateCatalogName(t, service.name)}
+                          {catalogName(service.name, service.id)}
                         </span>
                         <span className="mt-0.5 block text-xs leading-relaxed text-faint">
                           {t("common.minutes", { n: service.durationMinutes })} ·{" "}
@@ -455,7 +455,7 @@ export function BookingForm({
                 <SummaryRow
                   label={t("common.service")}
                   value={
-                    selectedService ? translateCatalogName(t, selectedService.name) : "—"
+                    selectedService ? catalogName(selectedService.name, selectedService.id) : "—"
                   }
                 />
                 <SummaryRow
@@ -537,7 +537,7 @@ export function BookingForm({
               label={t("common.service")}
               value={
                 selectedService
-                  ? translateCatalogName(t, selectedService.name)
+                  ? catalogName(selectedService.name, selectedService.id)
                   : t("common.notSelected")
               }
             />

@@ -7,6 +7,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -188,6 +189,21 @@ export const services = pgTable("services", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
+/** Romanian and Hungarian copy for a service. English stays on `services`. */
+export const serviceTranslations = pgTable(
+  "service_translations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    serviceId: uuid("service_id")
+      .notNull()
+      .references(() => services.id, { onDelete: "cascade" }),
+    locale: text("locale").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+  },
+  (table) => [unique("service_translations_service_locale_unique").on(table.serviceId, table.locale)],
+);
+
 export const availabilitySlots = pgTable("availability_slots", {
   id: uuid("id").primaryKey().defaultRandom(),
   shopId: uuid("shop_id")
@@ -336,6 +352,7 @@ export type Profile = typeof profiles.$inferSelect;
 export type NewProfile = typeof profiles.$inferInsert;
 export type Address = typeof addresses.$inferSelect;
 export type Service = typeof services.$inferSelect;
+export type ServiceTranslation = typeof serviceTranslations.$inferSelect;
 export type AvailabilitySlot = typeof availabilitySlots.$inferSelect;
 export type Appointment = typeof appointments.$inferSelect;
 export type Payment = typeof payments.$inferSelect;
