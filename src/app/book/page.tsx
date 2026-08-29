@@ -3,6 +3,7 @@ import { requireUser } from "@/lib/auth/guards";
 import { AppShell } from "@/components/layout/app-shell";
 import { BookingForm } from "@/components/booking/booking-form";
 import { getDefaultShopId } from "@/lib/tenancy/get-shop";
+import { listOpenAvailableDays } from "@/db/queries/available-days";
 import { listActiveServices } from "@/db/queries/services";
 import { listOpenSlots } from "@/db/queries/appointments";
 import { getTranslator } from "@/i18n/server";
@@ -18,9 +19,10 @@ export default async function BookPage({
   const { t } = await getTranslator();
 
   const shopId = await getDefaultShopId();
-  const [services, slots] = await Promise.all([
+  const [services, slots, openDays] = await Promise.all([
     listActiveServices(shopId),
     listOpenSlots(shopId),
+    listOpenAvailableDays(shopId),
   ]);
 
   return (
@@ -50,6 +52,7 @@ export default async function BookPage({
           startsAt: s.startsAt.toISOString(),
           endsAt: s.endsAt.toISOString(),
         }))}
+        availableDays={openDays.map((row) => row.day)}
       />
     </AppShell>
   );

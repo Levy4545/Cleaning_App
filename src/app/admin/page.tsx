@@ -17,7 +17,9 @@ import {
 } from "@/db/queries/appointments";
 import { findServiceById } from "@/db/queries/services";
 import { findUserById } from "@/db/queries/users";
-import { formatLongDate, formatMoney, formatSlotRange } from "@/lib/format";
+import { AvailableDaysManager } from "@/components/admin/available-days";
+import { formatDay, formatLongDate, formatMoney, formatSlotRange } from "@/lib/format";
+import { listAvailableDays } from "@/db/queries/available-days";
 import { getTranslator } from "@/i18n/server";
 
 export default async function AdminHomePage() {
@@ -25,9 +27,10 @@ export default async function AdminHomePage() {
   const shopId = await getDefaultShopId();
   const { t, locale, catalogName } = await getTranslator();
 
-  const [appointments, slots] = await Promise.all([
+  const [appointments, slots, freeDays] = await Promise.all([
     listAppointmentsForShop(shopId),
     listSlotsForShop(shopId),
+    listAvailableDays(shopId),
   ]);
 
   const pending = appointments.filter((a) => a.status === "PENDING");
@@ -49,7 +52,11 @@ export default async function AdminHomePage() {
         serviceName: catalogName(service?.name ?? t("common.service"), service?.id),
         customerName: customer?.name ?? null,
         customerEmail: customer?.email ?? t("common.customer"),
-        window: slot ? formatSlotRange(slot.startsAt, slot.endsAt, locale) : t("admin.noWindow"),
+        window: slot
+          ? formatSlotRange(slot.startsAt, slot.endsAt, locale)
+          : appointment.requestedDate
+            ? formatDay(`${appointment.requestedDate}T12:00:00`, locale)
+            : t("admin.noWindow"),
       };
     }),
   );
@@ -144,6 +151,14 @@ export default async function AdminHomePage() {
             </ul>
           )}
         </Card>
+
+        <AvailableDaysManager
+          days={freeDays.map((row) => ({
+            id: row.id,
+            day: row.day,
+            status: row.status,
+          }))}
+        />
       </div>
     </AppShell>
   );

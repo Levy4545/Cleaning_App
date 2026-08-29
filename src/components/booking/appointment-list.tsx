@@ -14,7 +14,7 @@ import { StatusBadge, statusTheme } from "@/components/ui/status-badge";
 import { localeTag } from "@/i18n/format";
 import { useI18n } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
-import { formatDeliveryMode, formatPriceRange, formatSlotRange } from "@/lib/format";
+import { formatDay, formatDeliveryMode, formatPriceRange, formatSlotRange } from "@/lib/format";
 import { ServiceIcon } from "@/lib/service-icon";
 
 export type AppointmentRow = {
@@ -27,6 +27,7 @@ export type AppointmentRow = {
   createdAt: string;
   slotStart: string | null;
   slotEnd: string | null;
+  requestedDate: string | null;
   statusNote: string | null;
   review: { rating: number; comment: string | null } | null;
 };
@@ -177,7 +178,9 @@ function AppointmentCard({ row }: { row: AppointmentRow }) {
               {formatDeliveryMode(row.deliveryMode, t)} ·{" "}
               {row.slotStart && row.slotEnd
                 ? formatSlotRange(row.slotStart, row.slotEnd, locale)
-                : t("appointments.requested", { when: requestedWhen })}
+                : row.requestedDate
+                  ? formatDay(`${row.requestedDate}T12:00:00`, locale)
+                  : t("appointments.requested", { when: requestedWhen })}
             </p>
           </div>
 

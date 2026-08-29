@@ -1,5 +1,6 @@
 import {
   boolean,
+  date,
   integer,
   jsonb,
   numeric,
@@ -206,6 +207,21 @@ export const serviceTranslations = pgTable(
   (table) => [unique("service_translations_service_locale_unique").on(table.serviceId, table.locale)],
 );
 
+/** Days the shop can accept day-only bookings (time window off). */
+export const availableDays = pgTable(
+  "available_days",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "cascade" }),
+    day: date("day", { mode: "string" }).notNull(),
+    status: slotStatusEnum("status").notNull().default("OPEN"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [unique("available_days_shop_day_unique").on(table.shopId, table.day)],
+);
+
 export const availabilitySlots = pgTable("availability_slots", {
   id: uuid("id").primaryKey().defaultRandom(),
   shopId: uuid("shop_id")
@@ -232,6 +248,8 @@ export const appointments = pgTable("appointments", {
     .notNull()
     .references(() => services.id, { onDelete: "restrict" }),
   slotId: uuid("slot_id").references(() => availabilitySlots.id, { onDelete: "restrict" }),
+  /** Set when the service does not require a time window — customer picks a free day. */
+  requestedDate: date("requested_date", { mode: "string" }),
   cleanerId: uuid("cleaner_id").references(() => users.id, { onDelete: "set null" }),
   addressId: uuid("address_id").references(() => addresses.id, { onDelete: "set null" }),
   status: appointmentStatusEnum("status").notNull().default("PENDING"),

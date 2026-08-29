@@ -16,6 +16,7 @@ import { localeTag } from "@/i18n/format";
 import { useI18n } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 import {
+  formatDay,
   formatDeliveryMode,
   formatItemType,
   formatPriceRange,
@@ -35,11 +36,11 @@ type ServiceOption = {
   itemTypeOptions: string[];
 };
 
-type StepId = "service" | "details" | "time" | "confirm";
+type StepId = "service" | "details" | "time" | "day" | "confirm";
 
 function stepsForService(service?: ServiceOption): StepId[] {
   if (service && service.requiresTimeWindow === false) {
-    return ["service", "details", "confirm"];
+    return ["service", "details", "day", "confirm"];
   }
   return ["service", "details", "time", "confirm"];
 }
@@ -90,10 +91,12 @@ function initialItemTypeForService(service?: ServiceOption): string {
 export function BookingForm({
   services,
   slots,
+  availableDays = [],
   initialServiceId,
 }: {
   services: ServiceOption[];
   slots: SlotOption[];
+  availableDays?: string[];
   initialServiceId?: string;
 }) {
   const router = useRouter();
@@ -109,6 +112,7 @@ export function BookingForm({
   const [itemType, setItemType] = useState(() => initialItemTypeForService(initialService));
   const [quantity, setQuantity] = useState(1);
   const [slotId, setSlotId] = useState("");
+  const [requestedDate, setRequestedDate] = useState("");
   const [details, setDetails] = useState("");
   const [notes, setNotes] = useState("");
   const [addressLine1, setAddressLine1] = useState("");
@@ -153,6 +157,8 @@ export function BookingForm({
     setItemType(initialItemTypeForService(next));
     if (next.requiresTimeWindow === false) {
       setSlotId("");
+    } else {
+      setRequestedDate("");
     }
     setStep((current) => Math.min(current, stepsForService(next).length - 1));
   };
@@ -171,6 +177,7 @@ export function BookingForm({
       }
     }
     if (currentStepId === "time" && !slotId) return t("book.pickWindow");
+    if (currentStepId === "day" && !requestedDate) return t("book.pickDay");
     return null;
   };
 
@@ -195,6 +202,7 @@ export function BookingForm({
       const result = await bookAppointment({
         serviceId,
         slotId: needsWindow && slotId ? slotId : undefined,
+        requestedDate: !needsWindow && requestedDate ? requestedDate : undefined,
         preferredDeliveryMode: deliveryMode,
         itemType: itemTypeOptions.length > 0 ? itemType : undefined,
         quantity,
@@ -464,6 +472,46 @@ export function BookingForm({
             </StepShell>
           ) : null}
 
+          {currentStepId === "day" ? (
+            <StepShell title={t("book.pickDayTitle")} hint={t("book.pickDayHint")}>
+              {availableDays.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 py-10 text-center">
+                  <CalendarX2 className="h-8 w-8 text-faint" />
+                  <p className="text-sm text-ash">{t("book.noDays")}</p>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {availableDays.map((day) => {
+                    const active = day === requestedDate;
+                    const date = new Date(`${day}T12:00:00`);
+                    return (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => setRequestedDate(day)}
+                        aria-pressed={active}
+                        className={cn(
+                          "flex w-16 flex-col items-center gap-0.5 rounded-lg border px-2 py-2.5 transition-colors",
+                          active
+                            ? "border-gold bg-gold text-ink"
+                            : "border-line bg-surface text-ash hover:border-line-strong hover:text-bone",
+                        )}
+                      >
+                        <span className="text-[10px] font-medium uppercase tracking-wider">
+                          {date.toLocaleDateString(localeTag(locale), { weekday: "short" })}
+                        </span>
+                        <span className="font-display text-lg leading-none">{date.getDate()}</span>
+                        <span className="text-[10px] uppercase">
+                          {date.toLocaleDateString(localeTag(locale), { month: "short" })}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </StepShell>
+          ) : null}
+
           {currentStepId === "confirm" ? (
             <StepShell title={t("book.confirm")} hint={t("book.confirmHint")}>
               <dl className="divide-y divide-line overflow-hidden rounded-xl border border-line">
@@ -502,9 +550,11 @@ export function BookingForm({
                           day: "numeric",
                           month: "short",
                         })} · ${formatTime(selectedSlot.startsAt, locale)} – ${formatTime(selectedSlot.endsAt, locale)}`
-                      : needsWindow
-                        ? "—"
-                        : t("common.toBeScheduled")
+                      : requestedDate
+                        ? formatDay(`${requestedDate}T12:00:00`, locale)
+                        : needsWindow
+                          ? "—"
+                          : t("common.toBeScheduled")
                   }
                 />
                 {!needsWindow ? (
@@ -577,9 +627,11 @@ export function BookingForm({
               value={
                 selectedSlot
                   ? `${formatTime(selectedSlot.startsAt, locale)} – ${formatTime(selectedSlot.endsAt, locale)}`
-                  : needsWindow
-                    ? t("common.notSelected")
-                    : t("common.toBeScheduled")
+                  : requestedDate
+                    ? formatDay(`${requestedDate}T12:00:00`, locale)
+                    : needsWindow
+                      ? t("common.notSelected")
+                      : t("common.toBeScheduled")
               }
             />
           </dl>
@@ -605,6 +657,7 @@ function Stepper({ step, stepIds }: { step: number; stepIds: StepId[] }) {
     service: t("book.stepService"),
     details: t("book.stepDetails"),
     time: t("book.stepTime"),
+    day: t("book.stepDay"),
     confirm: t("book.stepConfirm"),
   };
   const steps = stepIds.map((id) => labels[id]);

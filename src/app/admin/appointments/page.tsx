@@ -3,7 +3,7 @@ import { AppointmentsInbox, type InboxRow } from "@/components/admin/appointment
 import { requireAdmin } from "@/lib/auth/guards";
 import { getDefaultShopId } from "@/lib/tenancy/get-shop";
 import { listShopAppointmentsInbox } from "@/db/queries/appointments";
-import { formatItemType, formatPriceRange, formatSlotRange } from "@/lib/format";
+import { formatDay, formatItemType, formatPriceRange, formatSlotRange } from "@/lib/format";
 import { getTranslator } from "@/i18n/server";
 
 /**
@@ -26,7 +26,9 @@ export default async function AdminAppointmentsPage() {
     window:
       appointment.slotStartsAt && appointment.slotEndsAt
         ? formatSlotRange(appointment.slotStartsAt, appointment.slotEndsAt, locale)
-        : null,
+        : appointment.requestedDate
+          ? formatDay(`${appointment.requestedDate}T12:00:00`, locale)
+          : null,
     requestedAt: new Date(appointment.createdAt).toISOString(),
     notes: appointment.notes ?? null,
     statusNote: appointment.statusNote ?? null,

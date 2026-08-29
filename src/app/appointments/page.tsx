@@ -36,6 +36,7 @@ export default async function AppointmentsPage() {
         createdAt: new Date(appointment.createdAt).toISOString(),
         slotStart: slot ? new Date(slot.startsAt).toISOString() : null,
         slotEnd: slot ? new Date(slot.endsAt).toISOString() : null,
+        requestedDate: appointment.requestedDate ?? null,
         statusNote: appointment.statusNote ?? null,
         review: review ? { rating: review.rating, comment: review.comment ?? null } : null,
       };

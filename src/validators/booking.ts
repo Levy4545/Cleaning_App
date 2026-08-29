@@ -16,6 +16,10 @@ export const updateSlotSchema = z.object({
 export const createBookingSchema = z.object({
   serviceId: z.string().uuid(),
   slotId: z.string().uuid().optional(),
+  requestedDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, "Pick a valid date")
+    .optional(),
   /** Customer preference — admin confirms/overrides on approve. */
   preferredDeliveryMode: z.enum(["ON_SITE", "DROP_OFF"]).default("DROP_OFF"),
   /** Selected from the service's itemTypeOptions when that list is non-empty. */

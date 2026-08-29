@@ -232,6 +232,7 @@ export async function listShopAppointmentsInbox(shopId: string) {
       customerName: users.name,
       customerEmail: users.email,
       customerPhone: users.phone,
+      requestedDate: appointments.requestedDate,
       slotStartsAt: availabilitySlots.startsAt,
       slotEndsAt: availabilitySlots.endsAt,
       paymentAmount: payments.amount,
@@ -321,6 +322,7 @@ export async function createBooking(input: {
   customerId: string;
   serviceId: string;
   slotId?: string | null;
+  requestedDate?: string | null;
   addressId?: string | null;
   address?: {
     line1: string;
@@ -401,6 +403,7 @@ export async function createBooking(input: {
         customerId: input.customerId,
         serviceId: input.serviceId,
         slotId: slot?.id ?? null,
+        requestedDate: input.requestedDate ?? null,
         addressId,
         deliveryMode: input.deliveryMode,
         notes: input.notes,

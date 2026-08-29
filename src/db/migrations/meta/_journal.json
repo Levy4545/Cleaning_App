@@ -57,6 +57,13 @@
       "when": 1788027600000,
       "tag": "0007_optional_time_window",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788034000000,
+      "tag": "0008_available_days",
+      "breakpoints": true
     }
   ]
 }
