@@ -50,6 +50,9 @@ export function translateCatalogDescription(t: Translator["t"], description: str
   return key ? t(key) : description;
 }
 
+/** Display currency for catalog quotes, bookings, and recorded payments. */
+export const CURRENCY = "RON";
+
 export function localeTag(locale: Locale) {
   return LOCALE_TAGS[locale];
 }
@@ -58,7 +61,7 @@ export function formatMoney(amount: string | number, locale: Locale = "en") {
   const value = typeof amount === "string" ? Number(amount) : amount;
   return new Intl.NumberFormat(localeTag(locale), {
     style: "currency",
-    currency: "USD",
+    currency: CURRENCY,
     maximumFractionDigits: 2,
   }).format(Number.isFinite(value) ? value : 0);
 }
