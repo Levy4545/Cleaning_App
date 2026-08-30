@@ -1,58 +1,59 @@
-const money = new Intl.NumberFormat(undefined, {
-  style: "currency",
-  currency: "USD",
-  maximumFractionDigits: 2,
-});
+import {
+  formatDay as formatDayLocale,
+  formatLongDate as formatLongDateLocale,
+  formatMoney as formatMoneyLocale,
+  formatPriceRange as formatPriceRangeLocale,
+  formatSlotRange as formatSlotRangeLocale,
+  formatTime as formatTimeLocale,
+  translateCatalogName,
+} from "@/i18n/format";
+import type { Translator } from "@/i18n/dictionary";
+import type { Locale } from "@/i18n/locales";
 
-export function formatMoney(amount: string | number) {
-  const value = typeof amount === "string" ? Number(amount) : amount;
-  return money.format(Number.isFinite(value) ? value : 0);
+export function formatMoney(amount: string | number, locale: Locale = "en") {
+  return formatMoneyLocale(amount, locale);
 }
 
-/**
- * Formats an inclusive service price range for display.
- *
- * @param min - Lower bound of the quote range
- * @param max - Upper bound of the quote range
- * @returns A single amount when bounds match, otherwise `"$min – $max"`
- */
-export function formatPriceRange(min: string | number, max: string | number) {
-  const low = typeof min === "string" ? Number(min) : min;
-  const high = typeof max === "string" ? Number(max) : max;
-  const safeLow = Number.isFinite(low) ? low : 0;
-  const safeHigh = Number.isFinite(high) ? high : safeLow;
+export function formatPriceRange(
+  min: string | number,
+  max: string | number,
+  locale: Locale = "en",
+) {
+  return formatPriceRangeLocale(min, max, locale);
+}
 
-  if (safeLow === safeHigh) {
-    return formatMoney(safeLow);
+export function formatDay(value: Date | string, locale: Locale = "en") {
+  return formatDayLocale(value, locale);
+}
+
+export function formatTime(value: Date | string, locale: Locale = "en") {
+  return formatTimeLocale(value, locale);
+}
+
+export function formatSlotRange(
+  startsAt: Date | string,
+  endsAt: Date | string,
+  locale: Locale = "en",
+) {
+  return formatSlotRangeLocale(startsAt, endsAt, locale);
+}
+
+export function formatLongDate(value: Date | string, locale: Locale = "en") {
+  return formatLongDateLocale(value, locale);
+}
+
+export function formatDeliveryMode(mode: string, t?: Translator["t"]) {
+  if (t) {
+    return mode === "ON_SITE" ? t("common.onSite") : t("common.dropOff");
   }
-
-  return `${formatMoney(safeLow)} – ${formatMoney(safeHigh)}`;
-}
-
-export function formatDay(value: Date | string) {
-  return new Date(value).toLocaleDateString(undefined, {
-    weekday: "short",
-    day: "numeric",
-    month: "short",
-  });
-}
-
-export function formatTime(value: Date | string) {
-  return new Date(value).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
-}
-
-/** "Sat 14 Feb · 10:00 – 12:00" */
-export function formatSlotRange(startsAt: Date | string, endsAt: Date | string) {
-  return `${formatDay(startsAt)} · ${formatTime(startsAt)} – ${formatTime(endsAt)}`;
-}
-
-export function formatDeliveryMode(mode: string) {
   return mode === "ON_SITE" ? "On-site" : "Drop-off";
 }
 
-/** Title-cases a free-text item type option (e.g. leather → Leather). */
-export function formatItemType(itemType: string) {
+export function formatItemType(itemType: string, t?: Translator["t"]) {
   if (!itemType) return itemType;
+  if (t) {
+    return translateCatalogName(t, itemType);
+  }
   return itemType
     .split(/[\s_-]+/)
     .filter(Boolean)

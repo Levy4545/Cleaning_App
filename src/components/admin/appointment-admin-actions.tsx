@@ -14,6 +14,8 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
+import { useI18n } from "@/i18n/provider";
+import { formatDeliveryMode } from "@/lib/format";
 
 const COMPLETABLE = ["APPROVED", "ASSIGNED", "IN_PROGRESS"];
 
@@ -26,6 +28,7 @@ export function AppointmentAdminActions({
   status: string;
   preferredDeliveryMode: "ON_SITE" | "DROP_OFF";
 }) {
+  const { t } = useI18n();
   const [deliveryMode, setDeliveryMode] = useState<"ON_SITE" | "DROP_OFF">(preferredDeliveryMode);
   const [rejectReason, setRejectReason] = useState("");
   const [showRejectForm, setShowRejectForm] = useState(false);
@@ -37,7 +40,7 @@ export function AppointmentAdminActions({
     startTransition(async () => {
       const result = await action();
       if (!result.success) {
-        setError(result.error ?? "Action failed");
+        setError(result.error ?? t("common.actionFailed"));
       }
     });
   };
@@ -52,14 +55,14 @@ export function AppointmentAdminActions({
         <>
           <div className="flex flex-wrap items-end justify-between gap-3">
             <div className="min-w-52 space-y-2">
-              <Label htmlFor={`mode-${appointmentId}`}>Confirm delivery mode</Label>
+              <Label htmlFor={`mode-${appointmentId}`}>{t("admin.confirmMode")}</Label>
               <Select
                 id={`mode-${appointmentId}`}
                 value={deliveryMode}
                 onChange={(e) => setDeliveryMode(e.target.value as "ON_SITE" | "DROP_OFF")}
               >
-                <option value="DROP_OFF">Drop-off</option>
-                <option value="ON_SITE">On-site</option>
+                <option value="DROP_OFF">{t("common.dropOff")}</option>
+                <option value="ON_SITE">{t("common.onSite")}</option>
               </Select>
             </div>
 
@@ -70,7 +73,7 @@ export function AppointmentAdminActions({
                 onClick={() => setShowRejectForm((v) => !v)}
               >
                 <X className="h-4 w-4" />
-                Reject
+                {t("admin.reject")}
               </Button>
               <Button
                 variant="success"
@@ -78,25 +81,25 @@ export function AppointmentAdminActions({
                 onClick={() => run(() => approveAppointment({ appointmentId, deliveryMode }))}
               >
                 <Check className="h-4 w-4" />
-                Approve
+                {t("admin.approve")}
               </Button>
             </div>
           </div>
 
           <p className="text-xs text-faint">
-            The customer preferred{" "}
-            {preferredDeliveryMode === "ON_SITE" ? "on-site" : "drop-off"} — override it here before
-            approving if needed.
+            {t("admin.customerPreferred", {
+              mode: formatDeliveryMode(preferredDeliveryMode, t),
+            })}
           </p>
 
           {showRejectForm ? (
             <div className="space-y-3 rounded-lg border border-red-500/25 bg-red-500/5 p-4">
-              <Label htmlFor={`reason-${appointmentId}`}>Reason for client</Label>
+              <Label htmlFor={`reason-${appointmentId}`}>{t("admin.reasonForClient")}</Label>
               <Input
                 id={`reason-${appointmentId}`}
                 value={rejectReason}
                 onChange={(e) => setRejectReason(e.target.value)}
-                placeholder="Explain why this booking cannot be accepted"
+                placeholder={t("admin.rejectPlaceholder")}
               />
               <Button
                 variant="danger"
@@ -104,7 +107,7 @@ export function AppointmentAdminActions({
                 disabled={isPending}
                 onClick={() => run(() => rejectAppointment({ appointmentId, reason: rejectReason }))}
               >
-                Send rejection
+                {t("admin.sendRejection")}
               </Button>
             </div>
           ) : null}
@@ -117,12 +120,12 @@ export function AppointmentAdminActions({
             variant="danger-outline"
             disabled={isPending}
             onClick={() => {
-              const reason = window.prompt("Optional note for the customer:") ?? undefined;
+              const reason = window.prompt(t("admin.cancelNote")) ?? undefined;
               run(() => cancelAppointmentByAdmin(appointmentId, reason || undefined));
             }}
           >
             <X className="h-4 w-4" />
-            Cancel booking
+            {t("appointments.cancel")}
           </Button>
           <Button
             variant="success"
@@ -130,7 +133,7 @@ export function AppointmentAdminActions({
             onClick={() => run(() => completeAppointment(appointmentId))}
           >
             <Check className="h-4 w-4" />
-            Mark completed
+            {t("admin.markCompleted")}
           </Button>
         </div>
       ) : null}

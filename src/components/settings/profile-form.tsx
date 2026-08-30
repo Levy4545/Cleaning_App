@@ -9,6 +9,7 @@ import { Avatar } from "@/components/layout/app-sidebar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useI18n } from "@/i18n/provider";
 
 export function ProfileForm({
   name,
@@ -21,6 +22,7 @@ export function ProfileForm({
   phone: string | null;
   role: string;
 }) {
+  const { t } = useI18n();
   const [values, setValues] = useState({ name: name ?? "", phone: phone ?? "" });
   const [error, setError] = useState<string | null>(null);
   const [saved, setSaved] = useState(false);
@@ -59,19 +61,19 @@ export function ProfileForm({
 
         <div className="grid flex-1 gap-4 sm:grid-cols-2">
           <div className="space-y-2">
-            <Label htmlFor="name">Full name</Label>
+            <Label htmlFor="name">{t("settings.fullName")}</Label>
             <Input
               id="name"
               name="name"
               value={values.name}
               onChange={(e) => setValues((v) => ({ ...v, name: e.target.value }))}
-              placeholder="Jane Doe"
+              placeholder={t("auth.namePlaceholder")}
               required
             />
           </div>
 
           <div className="space-y-2">
-            <Label htmlFor="email">Email</Label>
+            <Label htmlFor="email">{t("common.email")}</Label>
             <div className="relative">
               <Input id="email" value={email} readOnly disabled className="pr-9" />
               <Lock className="absolute right-3 top-1/2 h-3.5 w-3.5 -translate-y-1/2 text-faint" />
@@ -79,7 +81,7 @@ export function ProfileForm({
           </div>
 
           <div className="space-y-2 sm:col-span-2">
-            <Label htmlFor="phone">Phone</Label>
+            <Label htmlFor="phone">{t("common.phone")}</Label>
             <Input
               id="phone"
               name="phone"
@@ -93,7 +95,7 @@ export function ProfileForm({
       </div>
 
       {error ? <Alert>{error}</Alert> : null}
-      {saved ? <Alert tone="success">Profile updated.</Alert> : null}
+      {saved ? <Alert tone="success">{t("settings.updated")}</Alert> : null}
 
       <div className="flex justify-end gap-2 border-t border-line pt-4">
         <Button
@@ -106,10 +108,10 @@ export function ProfileForm({
             setSaved(false);
           }}
         >
-          Cancel
+          {t("common.cancel")}
         </Button>
         <Button type="submit" disabled={!dirty || isPending}>
-          {isPending ? "Saving..." : "Save changes"}
+          {isPending ? t("settings.saving") : t("settings.saveChanges")}
         </Button>
       </div>
     </form>

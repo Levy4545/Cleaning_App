@@ -10,11 +10,13 @@ import {
   countUnreadInAppNotifications,
   listInAppNotificationsForUser,
 } from "@/db/queries/notifications";
+import { getTranslator } from "@/i18n/server";
 
 export default async function NotificationsPage() {
   await syncUserFromAuth();
   const user = await requireUser();
   const shopId = await getDefaultShopId();
+  const { t } = await getTranslator();
 
   const [rows, unreadCount] = await Promise.all([
     listInAppNotificationsForUser(user.id, shopId, 80),
@@ -35,8 +37,10 @@ export default async function NotificationsPage() {
     <AppShell
       variant={user.role === "ADMIN" ? "admin" : "customer"}
       user={user}
-      title="Notifications"
-      description="Booking status updates and messages"
+      title={t("notifications.title")}
+      titleKey="notifications.title"
+      description={t("notifications.description")}
+      descriptionKey="notifications.description"
     >
       <NotificationsPageClient items={items} unreadCount={unreadCount} />
     </AppShell>

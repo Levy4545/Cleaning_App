@@ -9,6 +9,7 @@ import {
   findAppointmentById,
   transitionAppointment,
 } from "@/db/queries/appointments";
+import { findAvailableDay } from "@/db/queries/available-days";
 import { findServiceById } from "@/db/queries/services";
 import { createReview, findReviewByAppointment } from "@/db/queries/reviews";
 import { notifyAdminsEvent, notifyUserEvent } from "@/lib/notifications/dispatch";
@@ -90,12 +91,30 @@ export async function bookAppointment(
     };
   }
 
+  const needsWindow = service.requiresTimeWindow !== false;
+  if (needsWindow && !parsed.data.slotId) {
+    return { success: false, error: "Choose a time window to continue." };
+  }
+
+  let requestedDate: string | null = null;
+  if (!needsWindow) {
+    if (!parsed.data.requestedDate) {
+      return { success: false, error: "Choose a day to continue." };
+    }
+    const openDay = await findAvailableDay(shopId, parsed.data.requestedDate);
+    if (!openDay || openDay.status !== "OPEN") {
+      return { success: false, error: "That day is not available." };
+    }
+    requestedDate = parsed.data.requestedDate;
+  }
+
   try {
     const appointment = await createBooking({
       shopId,
       customerId: user.id,
       serviceId: service.id,
-      slotId: parsed.data.slotId,
+      slotId: needsWindow ? parsed.data.slotId : null,
+      requestedDate,
       address,
       deliveryMode: preferredMode,
       notes: parsed.data.notes,

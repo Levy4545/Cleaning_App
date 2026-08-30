@@ -14,6 +14,8 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { inputClasses } from "@/components/ui/input";
+import { localeTag } from "@/i18n/format";
+import { useI18n } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 
 export type CalendarSlot = {
@@ -47,22 +49,19 @@ const TOOL_TO_STATUS: Record<CalendarTool, "OPEN" | "FULL" | "BLOCKED"> = {
   UNAVAILABLE: "BLOCKED",
 };
 
-const TOOLS: { id: CalendarTool; label: string; dot: string; active: string }[] = [
+const TOOLS: { id: CalendarTool; dot: string; active: string }[] = [
   {
     id: "FREE",
-    label: "Free slot",
     dot: "bg-emerald-400",
     active: "border-emerald-500/60 bg-emerald-500/10 text-emerald-300",
   },
   {
     id: "OCCUPIED",
-    label: "Occupied",
     dot: "bg-slate-400",
     active: "border-slate-400/60 bg-slate-400/10 text-slate-200",
   },
   {
     id: "UNAVAILABLE",
-    label: "Unavailable",
     dot: "bg-red-400",
     active: "border-red-500/60 bg-red-500/10 text-red-300",
   },
@@ -94,13 +93,6 @@ function sameDay(a: Date, b: Date) {
 function toLocalInputValue(date: Date) {
   const pad = (n: number) => String(n).padStart(2, "0");
   return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}T${pad(date.getHours())}:${pad(date.getMinutes())}`;
-}
-
-function statusLabel(status: string) {
-  if (status === "OPEN") return "Free";
-  if (status === "FULL") return "Occupied";
-  if (status === "BLOCKED") return "Unavailable";
-  return status;
 }
 
 function slotClasses(status: string) {
@@ -174,6 +166,18 @@ export function WeekCalendar({
   bookings?: CalendarBooking[];
 }) {
   const router = useRouter();
+  const { t, locale, catalogName } = useI18n();
+  const toolLabels: Record<CalendarTool, string> = {
+    FREE: t("calendar.freeSlot"),
+    OCCUPIED: t("calendar.occupied"),
+    UNAVAILABLE: t("calendar.unavailable"),
+  };
+  const slotStatusLabel = (status: string) => {
+    if (status === "OPEN") return t("calendar.free");
+    if (status === "FULL") return t("calendar.occupied");
+    if (status === "BLOCKED") return t("calendar.unavailable");
+    return status;
+  };
   const [weekAnchor, setWeekAnchor] = useState(() => startOfWeek(new Date()));
   const [tool, setTool] = useState<CalendarTool>("FREE");
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null);
@@ -232,7 +236,7 @@ export function WeekCalendar({
     startTransition(async () => {
       const result = await action();
       if (!result.success) {
-        setError(result.error ?? "Action failed");
+        setError(result.error ?? t("common.actionFailed"));
         return;
       }
       setSelectedSlotId(null);
@@ -246,7 +250,7 @@ export function WeekCalendar({
         <div className="flex items-center gap-2">
           <button
             type="button"
-            aria-label="Previous week"
+            aria-label={t("calendar.previousWeek")}
             onClick={() => setWeekAnchor((w) => addDays(w, -7))}
             className="flex h-9 w-9 items-center justify-center rounded-lg border border-line text-ash transition-colors hover:border-line-strong hover:text-bone"
           >
@@ -254,8 +258,8 @@ export function WeekCalendar({
           </button>
 
           <p className="min-w-52 text-center font-display text-lg text-bone">
-            {days[0].toLocaleDateString(undefined, { month: "short", day: "numeric" })} –{" "}
-            {days[6].toLocaleDateString(undefined, {
+            {days[0].toLocaleDateString(localeTag(locale), { month: "short", day: "numeric" })} –{" "}
+            {days[6].toLocaleDateString(localeTag(locale), {
               month: "short",
               day: "numeric",
               year: "numeric",
@@ -264,7 +268,7 @@ export function WeekCalendar({
 
           <button
             type="button"
-            aria-label="Next week"
+            aria-label={t("calendar.nextWeek")}
             onClick={() => setWeekAnchor((w) => addDays(w, 7))}
             className="flex h-9 w-9 items-center justify-center rounded-lg border border-line text-ash transition-colors hover:border-line-strong hover:text-bone"
           >
@@ -276,12 +280,12 @@ export function WeekCalendar({
             size="sm"
             onClick={() => setWeekAnchor(startOfWeek(new Date()))}
           >
-            Today
+            {t("common.today")}
           </Button>
         </div>
 
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-xs uppercase tracking-wider text-faint">Paint</span>
+          <span className="text-xs uppercase tracking-wider text-faint">{t("calendar.paint")}</span>
           {TOOLS.map((item) => (
             <button
               key={item.id}
@@ -296,15 +300,14 @@ export function WeekCalendar({
               )}
             >
               <span className={cn("h-2 w-2 rounded-full", item.dot)} />
-              {item.label}
+              {toolLabels[item.id]}
             </button>
           ))}
         </div>
       </div>
 
       <p className="text-xs text-faint">
-        Click an empty cell to paint it, click an existing block to repaint, double-click to edit
-        times. Amber blocks are pending bookings; sky blocks are completed jobs.
+        {t("calendar.hint")}
       </p>
 
       <div className="overflow-x-auto rounded-xl border border-line bg-panel">
@@ -325,7 +328,7 @@ export function WeekCalendar({
                 )}
               >
                 <div className="text-[10px] font-medium uppercase tracking-wider text-faint">
-                  {day.toLocaleDateString(undefined, { weekday: "short" })}
+                  {day.toLocaleDateString(localeTag(locale), { weekday: "short" })}
                 </div>
                 <div
                   className={cn(
@@ -382,7 +385,7 @@ export function WeekCalendar({
                           "absolute inset-0 transition-colors disabled:opacity-60",
                           hoverClasses(tool),
                         )}
-                        aria-label={`Paint ${hour}:00 as ${tool}`}
+                        aria-label={t("calendar.paintAs", { hour, tool: toolLabels[tool] })}
                       />
                     ) : null}
 
@@ -402,20 +405,22 @@ export function WeekCalendar({
                               ? "border-sky-500/40 bg-sky-500/15 text-sky-200 hover:bg-sky-500/25"
                               : "border-amber-500/40 bg-amber-500/15 text-amber-200 hover:bg-amber-500/25",
                           )}
-                          title={`${booking.serviceName} · ${booking.customerEmail}`}
+                          title={`${catalogName(booking.serviceName)} · ${booking.customerEmail}`}
                         >
                           <span className="block font-medium">
-                            {start.toLocaleTimeString([], {
+                            {start.toLocaleTimeString(localeTag(locale), {
                               hour: "2-digit",
                               minute: "2-digit",
                             })}
                             –
-                            {end.toLocaleTimeString([], {
+                            {end.toLocaleTimeString(localeTag(locale), {
                               hour: "2-digit",
                               minute: "2-digit",
                             })}
                           </span>
-                          <span className="block truncate opacity-80">{booking.serviceName}</span>
+                          <span className="block truncate opacity-80">
+                            {catalogName(booking.serviceName)}
+                          </span>
                         </button>
                       );
                     })}
@@ -442,17 +447,17 @@ export function WeekCalendar({
                           )}
                         >
                           <span className="block font-medium">
-                            {start.toLocaleTimeString([], {
+                            {start.toLocaleTimeString(localeTag(locale), {
                               hour: "2-digit",
                               minute: "2-digit",
                             })}
                             –
-                            {end.toLocaleTimeString([], {
+                            {end.toLocaleTimeString(localeTag(locale), {
                               hour: "2-digit",
                               minute: "2-digit",
                             })}
                           </span>
-                          <span className="block opacity-80">{statusLabel(slot.status)}</span>
+                          <span className="block opacity-80">{slotStatusLabel(slot.status)}</span>
                         </button>
                       );
                     })}
@@ -475,29 +480,30 @@ export function WeekCalendar({
       </div>
 
       <div className="flex flex-wrap items-center gap-4 text-xs text-faint">
-        <LegendItem className="border-emerald-500/40 bg-emerald-500/15" label="Free" />
-        <LegendItem className="border-slate-500/40 bg-slate-500/15" label="Occupied" />
-        <LegendItem className="border-red-500/40 bg-red-500/15" label="Unavailable" />
-        <LegendItem className="border-amber-500/40 bg-amber-500/15" label="Pending booking" />
-        <LegendItem className="border-sky-500/40 bg-sky-500/15" label="Completed" />
+        <LegendItem className="border-emerald-500/40 bg-emerald-500/15" label={t("calendar.free")} />
+        <LegendItem className="border-slate-500/40 bg-slate-500/15" label={t("calendar.occupied")} />
+        <LegendItem className="border-red-500/40 bg-red-500/15" label={t("calendar.unavailable")} />
+        <LegendItem className="border-amber-500/40 bg-amber-500/15" label={t("calendar.pendingBooking")} />
+        <LegendItem className="border-sky-500/40 bg-sky-500/15" label={t("calendar.completed")} />
       </div>
 
       {selected ? (
         <div className="rounded-xl border border-line bg-panel p-5">
           <div className="flex items-start justify-between gap-3">
             <div>
-              <p className="font-display text-lg text-bone">Edit slot</p>
+              <p className="font-display text-lg text-bone">{t("calendar.editSlot")}</p>
               <p className="mt-1 text-sm text-ash">
-                {new Date(selected.startsAt).toLocaleString()} →{" "}
-                {new Date(selected.endsAt).toLocaleString()} · {statusLabel(selected.status)}
+                {new Date(selected.startsAt).toLocaleString(localeTag(locale))} →{" "}
+                {new Date(selected.endsAt).toLocaleString(localeTag(locale))} ·{" "}
+                {slotStatusLabel(selected.status)}
                 {selected.bookedCount > 0
-                  ? ` · ${selected.bookedCount} booking request(s)`
+                  ? ` · ${t("calendar.bookingRequests", { n: selected.bookedCount })}`
                   : ""}
               </p>
             </div>
             <button
               type="button"
-              aria-label="Close"
+              aria-label={t("common.close")}
               onClick={() => setSelectedSlotId(null)}
               className="rounded-md p-1.5 text-faint transition-colors hover:bg-elevated hover:text-bone"
             >
@@ -520,7 +526,7 @@ export function WeekCalendar({
             }}
           >
             <div className="space-y-2">
-              <Label htmlFor="startsAt">Starts</Label>
+              <Label htmlFor="startsAt">{t("calendar.starts")}</Label>
               <input
                 id="startsAt"
                 name="startsAt"
@@ -531,7 +537,7 @@ export function WeekCalendar({
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="endsAt">Ends</Label>
+              <Label htmlFor="endsAt">{t("calendar.ends")}</Label>
               <input
                 id="endsAt"
                 name="endsAt"
@@ -543,7 +549,7 @@ export function WeekCalendar({
 
             <div className="flex flex-wrap gap-2 sm:col-span-2">
               <Button type="submit" disabled={isPending}>
-                Save times
+                {t("calendar.saveTimes")}
               </Button>
               <Button
                 type="button"
@@ -552,7 +558,7 @@ export function WeekCalendar({
                 onClick={() => run(() => deleteAvailabilitySlot(selected.id))}
               >
                 <Trash2 className="h-4 w-4" />
-                Delete
+                {t("common.delete")}
               </Button>
             </div>
           </form>

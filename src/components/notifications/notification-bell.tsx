@@ -9,6 +9,8 @@ import {
   markAllAsRead,
   markNotificationAsRead,
 } from "@/actions/notifications";
+import { useI18n } from "@/i18n/provider";
+import type { Translator } from "@/i18n/dictionary";
 import { cn } from "@/lib/utils";
 
 type FeedItem = {
@@ -21,18 +23,19 @@ type FeedItem = {
   createdAt: string;
 };
 
-function relativeTime(iso: string) {
+function relativeTime(iso: string, t: Translator["t"]) {
   const diffMs = Date.now() - new Date(iso).getTime();
   const minutes = Math.round(diffMs / 60000);
-  if (minutes < 1) return "just now";
-  if (minutes < 60) return `${minutes}m ago`;
+  if (minutes < 1) return t("notifications.justNow");
+  if (minutes < 60) return t("notifications.minutesAgo", { n: minutes });
   const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours}h ago`;
+  if (hours < 24) return t("notifications.hoursAgo", { n: hours });
   const days = Math.round(hours / 24);
-  return `${days}d ago`;
+  return t("notifications.daysAgo", { n: days });
 }
 
 export function NotificationBell() {
+  const { t } = useI18n();
   const [open, setOpen] = useState(false);
   const [items, setItems] = useState<FeedItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
@@ -93,7 +96,11 @@ export function NotificationBell() {
       <button
         type="button"
         onClick={onOpen}
-        aria-label={unreadCount > 0 ? `${unreadCount} unread notifications` : "Notifications"}
+        aria-label={
+          unreadCount > 0
+            ? t("notifications.ariaUnread", { n: unreadCount })
+            : t("notifications.aria")
+        }
         className="relative rounded-md p-2 text-ash transition-colors hover:bg-elevated hover:text-bone"
       >
         <Bell className="h-5 w-5" />
@@ -107,7 +114,7 @@ export function NotificationBell() {
       {open ? (
         <div className="absolute right-0 z-50 mt-2 w-[min(100vw-2rem,22rem)] overflow-hidden rounded-xl border border-line bg-panel shadow-xl">
           <div className="flex items-center justify-between border-b border-line px-4 py-3">
-            <p className="text-sm font-medium text-bone">Notifications</p>
+            <p className="text-sm font-medium text-bone">{t("notifications.title")}</p>
             <button
               type="button"
               onClick={onMarkAll}
@@ -115,24 +122,26 @@ export function NotificationBell() {
               className="inline-flex items-center gap-1 text-xs text-ash transition-colors hover:text-gold disabled:opacity-40"
             >
               <CheckCheck className="h-3.5 w-3.5" />
-              Mark all read
+              {t("notifications.markAll")}
             </button>
           </div>
 
           <ul className="max-h-80 overflow-y-auto">
             {items.length === 0 ? (
-              <li className="px-4 py-8 text-center text-sm text-ash">No notifications yet.</li>
+              <li className="px-4 py-8 text-center text-sm text-ash">
+                {t("notifications.noneYet")}
+              </li>
             ) : (
               items.slice(0, 12).map((item) => {
                 const unread = !item.readAt;
                 const content = (
                   <>
                     <p className={cn("text-sm", unread ? "font-medium text-bone" : "text-ash")}>
-                      {item.subject ?? "Update"}
+                      {item.subject ?? t("notifications.update")}
                     </p>
                     <p className="mt-0.5 line-clamp-2 text-xs text-faint">{item.body}</p>
                     <p className="mt-1.5 text-[10px] uppercase tracking-wide text-faint">
-                      {relativeTime(item.createdAt)}
+                      {relativeTime(item.createdAt, t)}
                     </p>
                   </>
                 );
@@ -174,7 +183,7 @@ export function NotificationBell() {
               onClick={() => setOpen(false)}
               className="text-xs font-medium text-gold hover:underline"
             >
-              View all notifications
+              {t("notifications.viewAll")}
             </Link>
           </div>
         </div>

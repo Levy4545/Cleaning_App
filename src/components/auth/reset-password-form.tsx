@@ -7,8 +7,10 @@ import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { useI18n } from "@/i18n/provider";
 
 export function ResetPasswordForm({ defaultEmail = "" }: { defaultEmail?: string }) {
+  const { t } = useI18n();
   const [message, setMessage] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
@@ -27,7 +29,7 @@ export function ResetPasswordForm({ defaultEmail = "" }: { defaultEmail?: string
         return;
       }
 
-      setMessage("Check your email for a password reset link.");
+      setMessage(t("settings.resetSent"));
     });
   };
 
@@ -35,7 +37,7 @@ export function ResetPasswordForm({ defaultEmail = "" }: { defaultEmail?: string
     <form action={handleSubmit} className="space-y-4">
       <div className="flex flex-wrap items-end gap-3">
         <div className="min-w-56 flex-1 space-y-2">
-          <Label htmlFor="reset-email">Email</Label>
+          <Label htmlFor="reset-email">{t("common.email")}</Label>
           <Input
             id="reset-email"
             name="email"
@@ -46,7 +48,7 @@ export function ResetPasswordForm({ defaultEmail = "" }: { defaultEmail?: string
           />
         </div>
         <Button type="submit" variant="secondary" disabled={isPending}>
-          {isPending ? "Sending..." : "Send reset link"}
+          {isPending ? t("settings.sending") : t("settings.sendReset")}
         </Button>
       </div>
 

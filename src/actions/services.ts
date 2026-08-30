@@ -16,6 +16,7 @@ import {
   setServiceActive,
   updateCategory,
   updateService,
+  type ServiceTranslationInput,
 } from "@/db/queries/services";
 import {
   createCategorySchema,
@@ -36,6 +37,37 @@ function revalidateCatalogPaths() {
   revalidatePath("/book");
   revalidatePath("/dashboard");
   revalidatePath("/");
+  revalidatePath("/", "layout");
+}
+
+function localeTranslation(
+  name: string | undefined,
+  description: string | undefined,
+  fallbackName: string,
+  locale: ServiceTranslationInput["locale"],
+): ServiceTranslationInput | null {
+  const trimmedName = name?.trim() ?? "";
+  const trimmedDescription = description?.trim() ?? "";
+  if (!trimmedName && !trimmedDescription) return null;
+  return {
+    locale,
+    name: trimmedName || fallbackName,
+    description: trimmedDescription || null,
+  };
+}
+
+function translationsFromInput(input: {
+  name: string;
+  nameRo?: string;
+  descriptionRo?: string;
+  nameHu?: string;
+  descriptionHu?: string;
+}): ServiceTranslationInput[] {
+  const fallback = input.name.trim();
+  return [
+    localeTranslation(input.nameRo, input.descriptionRo, fallback, "ro"),
+    localeTranslation(input.nameHu, input.descriptionHu, fallback, "hu"),
+  ].filter((row): row is ServiceTranslationInput => row !== null);
 }
 
 async function resolveUniqueCategorySlug(
@@ -206,9 +238,11 @@ export async function createCatalogService(
     deliveryModes: parsed.data.deliveryModes,
     itemTypeOptions,
     durationMinutes: parsed.data.durationMinutes,
+    requiresTimeWindow: parsed.data.requiresTimeWindow ?? true,
     priceMin: parsed.data.priceMin,
     priceMax: parsed.data.priceMax,
     isActive: parsed.data.isActive ?? true,
+    translations: translationsFromInput(parsed.data),
   });
 
   if (!service) {
@@ -259,9 +293,11 @@ export async function updateCatalogService(
     deliveryModes: parsed.data.deliveryModes,
     itemTypeOptions,
     durationMinutes: parsed.data.durationMinutes,
+    requiresTimeWindow: parsed.data.requiresTimeWindow ?? existing.requiresTimeWindow,
     priceMin: parsed.data.priceMin,
     priceMax: parsed.data.priceMax,
     isActive: parsed.data.isActive ?? existing.isActive,
+    translations: translationsFromInput(parsed.data),
   });
 
   if (!updated) {

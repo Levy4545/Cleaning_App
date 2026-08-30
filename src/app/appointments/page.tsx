@@ -9,11 +9,13 @@ import { getDefaultShopId } from "@/lib/tenancy/get-shop";
 import { findSlotById, listAppointmentsForCustomer } from "@/db/queries/appointments";
 import { findServiceById } from "@/db/queries/services";
 import { findReviewByAppointment } from "@/db/queries/reviews";
+import { getTranslator } from "@/i18n/server";
 
 export default async function AppointmentsPage() {
   await syncUserFromAuth();
   const user = await requireUser();
   const shopId = await getDefaultShopId();
+  const { t } = await getTranslator();
   const appointments = await listAppointmentsForCustomer(user.id, shopId);
 
   const rows: AppointmentRow[] = await Promise.all(
@@ -26,7 +28,7 @@ export default async function AppointmentsPage() {
 
       return {
         id: appointment.id,
-        serviceName: service?.name ?? "Service",
+        serviceName: service?.name ?? t("common.service"),
         priceMin: service?.priceMin ?? "0",
         priceMax: service?.priceMax ?? "0",
         status: appointment.status,
@@ -34,6 +36,7 @@ export default async function AppointmentsPage() {
         createdAt: new Date(appointment.createdAt).toISOString(),
         slotStart: slot ? new Date(slot.startsAt).toISOString() : null,
         slotEnd: slot ? new Date(slot.endsAt).toISOString() : null,
+        requestedDate: appointment.requestedDate ?? null,
         statusNote: appointment.statusNote ?? null,
         review: review ? { rating: review.rating, comment: review.comment ?? null } : null,
       };
@@ -44,12 +47,14 @@ export default async function AppointmentsPage() {
     <AppShell
       variant="customer"
       user={user}
-      title="My appointments"
-      description="Track status and leave a review when the job is done."
+      title={t("appointments.title")}
+      titleKey="appointments.title"
+      description={t("appointments.description")}
+      descriptionKey="appointments.description"
       actions={
         <ButtonLink href="/book" size="sm">
           <CalendarPlus className="h-4 w-4" />
-          New booking
+          {t("appointments.newBooking")}
         </ButtonLink>
       }
     >

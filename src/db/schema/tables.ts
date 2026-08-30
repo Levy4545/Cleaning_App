@@ -1,5 +1,6 @@
 import {
   boolean,
+  date,
   integer,
   jsonb,
   numeric,
@@ -7,6 +8,7 @@ import {
   pgTable,
   text,
   timestamp,
+  unique,
   uuid,
 } from "drizzle-orm/pg-core";
 
@@ -181,12 +183,44 @@ export const services = pgTable("services", {
    */
   itemTypeOptions: text("item_type_options").array().notNull().default([]),
   durationMinutes: integer("duration_minutes").notNull().default(60),
+  /** When false, customers can request the service without picking a slot. */
+  requiresTimeWindow: boolean("requires_time_window").notNull().default(true),
   /** Inclusive price range — quotes are not fixed single amounts. */
   priceMin: numeric("price_min", { precision: 10, scale: 2 }).notNull().default("0"),
   priceMax: numeric("price_max", { precision: 10, scale: 2 }).notNull().default("0"),
   isActive: boolean("is_active").notNull().default(true),
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
+
+/** Romanian and Hungarian copy for a service. English stays on `services`. */
+export const serviceTranslations = pgTable(
+  "service_translations",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    serviceId: uuid("service_id")
+      .notNull()
+      .references(() => services.id, { onDelete: "cascade" }),
+    locale: text("locale").notNull(),
+    name: text("name").notNull(),
+    description: text("description"),
+  },
+  (table) => [unique("service_translations_service_locale_unique").on(table.serviceId, table.locale)],
+);
+
+/** Days the shop can accept day-only bookings (time window off). */
+export const availableDays = pgTable(
+  "available_days",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "cascade" }),
+    day: date("day", { mode: "string" }).notNull(),
+    status: slotStatusEnum("status").notNull().default("OPEN"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [unique("available_days_shop_day_unique").on(table.shopId, table.day)],
+);
 
 export const availabilitySlots = pgTable("availability_slots", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -213,9 +247,9 @@ export const appointments = pgTable("appointments", {
   serviceId: uuid("service_id")
     .notNull()
     .references(() => services.id, { onDelete: "restrict" }),
-  slotId: uuid("slot_id")
-    .notNull()
-    .references(() => availabilitySlots.id, { onDelete: "restrict" }),
+  slotId: uuid("slot_id").references(() => availabilitySlots.id, { onDelete: "restrict" }),
+  /** Set when the service does not require a time window — customer picks a free day. */
+  requestedDate: date("requested_date", { mode: "string" }),
   cleanerId: uuid("cleaner_id").references(() => users.id, { onDelete: "set null" }),
   addressId: uuid("address_id").references(() => addresses.id, { onDelete: "set null" }),
   status: appointmentStatusEnum("status").notNull().default("PENDING"),
@@ -336,6 +370,7 @@ export type Profile = typeof profiles.$inferSelect;
 export type NewProfile = typeof profiles.$inferInsert;
 export type Address = typeof addresses.$inferSelect;
 export type Service = typeof services.$inferSelect;
+export type ServiceTranslation = typeof serviceTranslations.$inferSelect;
 export type AvailabilitySlot = typeof availabilitySlots.$inferSelect;
 export type Appointment = typeof appointments.$inferSelect;
 export type Payment = typeof payments.$inferSelect;

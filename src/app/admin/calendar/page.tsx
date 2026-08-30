@@ -5,10 +5,12 @@ import { getDefaultShopId } from "@/lib/tenancy/get-shop";
 import { listCalendarBookings, listSlotsForShop } from "@/db/queries/appointments";
 import { findServiceById } from "@/db/queries/services";
 import { findUserById } from "@/db/queries/users";
+import { getTranslator } from "@/i18n/server";
 
 export default async function AdminCalendarPage() {
   const admin = await requireAdmin();
   const shopId = await getDefaultShopId();
+  const { t } = await getTranslator();
 
   const [slots, bookingRows] = await Promise.all([
     listSlotsForShop(shopId),
@@ -28,8 +30,8 @@ export default async function AdminCalendarPage() {
         status: row.status,
         startsAt: row.startsAt.toISOString(),
         endsAt: row.endsAt.toISOString(),
-        customerEmail: customer?.email ?? "Customer",
-        serviceName: service?.name ?? "Service",
+        customerEmail: customer?.email ?? t("common.customer"),
+        serviceName: service?.name ?? t("common.service"),
         deliveryMode: row.deliveryMode,
       };
     }),
@@ -39,8 +41,10 @@ export default async function AdminCalendarPage() {
     <AppShell
       variant="admin"
       user={admin}
-      title="Availability"
-      description="Paint open windows, block time off, and review booked slots."
+      title={t("admin.calendarTitle")}
+      titleKey="admin.calendarTitle"
+      description={t("admin.calendarBody")}
+      descriptionKey="admin.calendarBody"
     >
       <WeekCalendar
         slots={slots.map((slot) => ({

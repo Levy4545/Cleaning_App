@@ -17,15 +17,20 @@ import {
 } from "@/db/queries/appointments";
 import { findServiceById } from "@/db/queries/services";
 import { findUserById } from "@/db/queries/users";
-import { formatMoney, formatSlotRange } from "@/lib/format";
+import { AvailableDaysManager } from "@/components/admin/available-days";
+import { formatDay, formatLongDate, formatMoney, formatSlotRange } from "@/lib/format";
+import { listAvailableDays } from "@/db/queries/available-days";
+import { getTranslator } from "@/i18n/server";
 
 export default async function AdminHomePage() {
   const admin = await requireAdmin();
   const shopId = await getDefaultShopId();
+  const { t, locale, catalogName } = await getTranslator();
 
-  const [appointments, slots] = await Promise.all([
+  const [appointments, slots, freeDays] = await Promise.all([
     listAppointmentsForShop(shopId),
     listSlotsForShop(shopId),
+    listAvailableDays(shopId),
   ]);
 
   const pending = appointments.filter((a) => a.status === "PENDING");
@@ -44,10 +49,14 @@ export default async function AdminHomePage() {
       return {
         id: appointment.id,
         status: appointment.status,
-        serviceName: service?.name ?? "Service",
+        serviceName: catalogName(service?.name ?? t("common.service"), service?.id),
         customerName: customer?.name ?? null,
-        customerEmail: customer?.email ?? "Customer",
-        window: slot ? formatSlotRange(slot.startsAt, slot.endsAt) : "No window",
+        customerEmail: customer?.email ?? t("common.customer"),
+        window: slot
+          ? formatSlotRange(slot.startsAt, slot.endsAt, locale)
+          : appointment.requestedDate
+            ? formatDay(`${appointment.requestedDate}T12:00:00`, locale)
+            : t("admin.noWindow"),
       };
     }),
   );
@@ -65,41 +74,48 @@ export default async function AdminHomePage() {
     <AppShell
       variant="admin"
       user={admin}
-      title="Overview"
-      description={new Date().toLocaleDateString(undefined, {
-        weekday: "long",
-        day: "numeric",
-        month: "long",
-      })}
+      title={t("admin.overview")}
+      titleKey="admin.overview"
+      description={formatLongDate(new Date(), locale)}
       actions={
         <ButtonLink href="/admin/calendar" size="sm">
           <CalendarClock className="h-4 w-4" />
-          Manage availability
+          {t("admin.manageAvailability")}
         </ButtonLink>
       }
     >
       <div className="space-y-6">
         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-          <StatCard label="Pending" value={pending.length} icon={Clock} tone="amber" />
-          <StatCard label="Approved" value={approved.length} icon={CheckCircle2} tone="blue" />
-          <StatCard label="Open slots" value={openSlots} icon={CalendarClock} tone="emerald" />
+          <StatCard label={t("admin.pending")} value={pending.length} icon={Clock} tone="amber" />
           <StatCard
-            label="Revenue"
-            value={formatMoney(revenue)}
+            label={t("admin.approved")}
+            value={approved.length}
+            icon={CheckCircle2}
+            tone="blue"
+          />
+          <StatCard
+            label={t("admin.openSlots")}
+            value={openSlots}
+            icon={CalendarClock}
+            tone="emerald"
+          />
+          <StatCard
+            label={t("admin.revenue")}
+            value={formatMoney(revenue, locale)}
             icon={Wallet}
             tone="gold"
-            hint={`${completed.length} completed jobs`}
+            hint={t("admin.completedJobs", { n: completed.length })}
           />
         </div>
 
         <Card glow>
           <div className="mb-4 flex items-center justify-between">
-            <CardTitle className="text-base">Needs attention</CardTitle>
+            <CardTitle className="text-base">{t("admin.needsAttention")}</CardTitle>
             <Link
               href="/admin/appointments"
               className="inline-flex items-center gap-1 text-xs text-gold hover:underline"
             >
-              Open inbox
+              {t("admin.openInbox")}
               <ArrowRight className="h-3 w-3" />
             </Link>
           </div>
@@ -107,8 +123,8 @@ export default async function AdminHomePage() {
           {attention.length === 0 ? (
             <EmptyState
               icon={CheckCircle2}
-              title="All clear"
-              description="No pending or approved jobs waiting on you."
+              title={t("admin.allClear")}
+              description={t("admin.allClearBody")}
             />
           ) : (
             <ul className="divide-y divide-line">
@@ -128,13 +144,21 @@ export default async function AdminHomePage() {
                   <StatusBadge status={row.status} />
 
                   <ButtonLink href="/admin/appointments" size="sm" variant="secondary">
-                    Review
+                    {t("admin.review")}
                   </ButtonLink>
                 </li>
               ))}
             </ul>
           )}
         </Card>
+
+        <AvailableDaysManager
+          days={freeDays.map((row) => ({
+            id: row.id,
+            day: row.day,
+            status: row.status,
+          }))}
+        />
       </div>
     </AppShell>
   );

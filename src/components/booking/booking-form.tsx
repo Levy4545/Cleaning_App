@@ -12,8 +12,11 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Select } from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
+import { localeTag } from "@/i18n/format";
+import { useI18n } from "@/i18n/provider";
 import { cn } from "@/lib/utils";
 import {
+  formatDay,
   formatDeliveryMode,
   formatItemType,
   formatPriceRange,
@@ -28,9 +31,19 @@ type ServiceOption = {
   priceMin: string;
   priceMax: string;
   durationMinutes: number;
+  requiresTimeWindow: boolean;
   deliveryModes: string[];
   itemTypeOptions: string[];
 };
+
+type StepId = "service" | "details" | "time" | "day" | "confirm";
+
+function stepsForService(service?: ServiceOption): StepId[] {
+  if (service && service.requiresTimeWindow === false) {
+    return ["service", "details", "day", "confirm"];
+  }
+  return ["service", "details", "time", "confirm"];
+}
 
 type SlotOption = {
   id: string;
@@ -39,8 +52,6 @@ type SlotOption = {
 };
 
 type DeliveryMode = "ON_SITE" | "DROP_OFF";
-
-const STEPS = ["Service", "Details", "Time", "Confirm"];
 
 /**
  * Creates a local calendar-day key from an ISO date string.
@@ -80,13 +91,16 @@ function initialItemTypeForService(service?: ServiceOption): string {
 export function BookingForm({
   services,
   slots,
+  availableDays = [],
   initialServiceId,
 }: {
   services: ServiceOption[];
   slots: SlotOption[];
+  availableDays?: string[];
   initialServiceId?: string;
 }) {
   const router = useRouter();
+  const { t, locale, catalogName } = useI18n();
   const initialService =
     services.find((s) => s.id === initialServiceId) ?? services[0] ?? undefined;
 
@@ -98,6 +112,7 @@ export function BookingForm({
   const [itemType, setItemType] = useState(() => initialItemTypeForService(initialService));
   const [quantity, setQuantity] = useState(1);
   const [slotId, setSlotId] = useState("");
+  const [requestedDate, setRequestedDate] = useState("");
   const [details, setDetails] = useState("");
   const [notes, setNotes] = useState("");
   const [addressLine1, setAddressLine1] = useState("");
@@ -108,6 +123,9 @@ export function BookingForm({
 
   const selectedService = services.find((s) => s.id === serviceId);
   const selectedSlot = slots.find((s) => s.id === slotId);
+  const stepIds = stepsForService(selectedService);
+  const currentStepId = stepIds[step] ?? "service";
+  const needsWindow = selectedService?.requiresTimeWindow !== false;
 
   const availableModes = useMemo(() => {
     const modes = selectedService?.deliveryModes ?? ["DROP_OFF"];
@@ -137,22 +155,29 @@ export function BookingForm({
     setServiceId(next.id);
     setDeliveryMode(initialModeForService(next));
     setItemType(initialItemTypeForService(next));
+    if (next.requiresTimeWindow === false) {
+      setSlotId("");
+    } else {
+      setRequestedDate("");
+    }
+    setStep((current) => Math.min(current, stepsForService(next).length - 1));
   };
 
   const itemTypeOptions = selectedService?.itemTypeOptions ?? [];
 
   const stepError = (): string | null => {
-    if (step === 0 && !serviceId) return "Pick a service to continue.";
-    if (step === 1) {
-      if (quantity < 1) return "Quantity must be at least 1.";
+    if (currentStepId === "service" && !serviceId) return t("book.pickService");
+    if (currentStepId === "details") {
+      if (quantity < 1) return t("book.quantityMin");
       if (itemTypeOptions.length > 0 && !itemType) {
-        return "Pick an item type for this service.";
+        return t("book.pickItemType");
       }
       if (deliveryMode === "ON_SITE" && (!addressLine1.trim() || !addressCity.trim())) {
-        return "On-site bookings need a street and city.";
+        return t("book.needAddress");
       }
     }
-    if (step === 2 && !slotId) return "Choose a time window to continue.";
+    if (currentStepId === "time" && !slotId) return t("book.pickWindow");
+    if (currentStepId === "day" && !requestedDate) return t("book.pickDay");
     return null;
   };
 
@@ -163,7 +188,7 @@ export function BookingForm({
       return;
     }
     setError(null);
-    setStep((s) => Math.min(s + 1, STEPS.length - 1));
+    setStep((s) => Math.min(s + 1, stepIds.length - 1));
   };
 
   const goBack = () => {
@@ -176,7 +201,8 @@ export function BookingForm({
     startTransition(async () => {
       const result = await bookAppointment({
         serviceId,
-        slotId,
+        slotId: needsWindow && slotId ? slotId : undefined,
+        requestedDate: !needsWindow && requestedDate ? requestedDate : undefined,
         preferredDeliveryMode: deliveryMode,
         itemType: itemTypeOptions.length > 0 ? itemType : undefined,
         quantity,
@@ -200,24 +226,19 @@ export function BookingForm({
   if (services.length === 0) {
     return (
       <Card>
-        <p className="text-sm text-ash">
-          No services available. Ask an admin to seed the catalog.
-        </p>
+        <p className="text-sm text-ash">{t("book.noCatalog")}</p>
       </Card>
     );
   }
 
   return (
     <div className="space-y-6">
-      <Stepper step={step} />
+      <Stepper step={step} stepIds={stepIds} />
 
       <div className="grid gap-6 lg:grid-cols-[1fr_320px] lg:items-start">
         <Card glow className="p-6 sm:p-8">
-          {step === 0 ? (
-            <StepShell
-              title="Choose a service"
-              hint="Pick what needs cleaning. You can add details next."
-            >
+          {currentStepId === "service" ? (
+            <StepShell title={t("book.chooseService")} hint={t("book.chooseServiceHint")}>
               <div className="grid gap-3 sm:grid-cols-2">
                 {services.map((service) => {
                   const active = service.id === serviceId;
@@ -241,10 +262,14 @@ export function BookingForm({
                         strokeWidth={1.25}
                       />
                       <span className="min-w-0 flex-1">
-                        <span className="block text-sm font-medium text-bone">{service.name}</span>
+                        <span className="block text-sm font-medium text-bone">
+                          {catalogName(service.name, service.id)}
+                        </span>
                         <span className="mt-0.5 block text-xs leading-relaxed text-faint">
-                          {service.durationMinutes} min ·{" "}
-                          {formatPriceRange(service.priceMin, service.priceMax)}
+                          {service.requiresTimeWindow === false
+                            ? t("common.dayOnly")
+                            : t("common.minutes", { n: service.durationMinutes })}{" "}
+                          · {formatPriceRange(service.priceMin, service.priceMax, locale)}
                         </span>
                       </span>
                       {active ? <Check className="h-4 w-4 shrink-0 text-gold" /> : null}
@@ -255,11 +280,11 @@ export function BookingForm({
             </StepShell>
           ) : null}
 
-          {step === 1 ? (
-            <StepShell title="Add the details" hint="Tell us what we are working with.">
+          {currentStepId === "details" ? (
+            <StepShell title={t("book.addDetails")} hint={t("book.addDetailsHint")}>
               <div className="space-y-5">
                 <div className="space-y-2">
-                  <Label>Delivery preference</Label>
+                  <Label>{t("book.deliveryPreference")}</Label>
                   <div className="flex flex-wrap gap-2">
                     {availableModes.map((mode) => (
                       <button
@@ -274,11 +299,11 @@ export function BookingForm({
                             : "border-line bg-surface text-ash hover:border-line-strong hover:text-bone",
                         )}
                       >
-                        {formatDeliveryMode(mode)}
+                        {formatDeliveryMode(mode, t)}
                       </button>
                     ))}
                   </div>
-                  <p className="text-xs text-faint">The shop confirms this when approving.</p>
+                  <p className="text-xs text-faint">{t("book.shopConfirms")}</p>
                 </div>
 
                 <div
@@ -289,7 +314,7 @@ export function BookingForm({
                 >
                   {itemTypeOptions.length > 0 ? (
                     <div className="space-y-2">
-                      <Label htmlFor="itemType">Item type</Label>
+                      <Label htmlFor="itemType">{t("common.itemType")}</Label>
                       <Select
                         id="itemType"
                         value={itemType}
@@ -297,7 +322,7 @@ export function BookingForm({
                       >
                         {itemTypeOptions.map((option) => (
                           <option key={option} value={option}>
-                            {formatItemType(option)}
+                            {formatItemType(option, t)}
                           </option>
                         ))}
                       </Select>
@@ -305,7 +330,7 @@ export function BookingForm({
                   ) : null}
 
                   <div className="space-y-2">
-                    <Label htmlFor="quantity">Quantity</Label>
+                    <Label htmlFor="quantity">{t("common.quantity")}</Label>
                     <Input
                       id="quantity"
                       type="number"
@@ -320,11 +345,11 @@ export function BookingForm({
                   <div className="space-y-4 rounded-xl border border-line bg-surface p-4">
                     <p className="flex items-center gap-2 text-sm font-medium text-bone">
                       <MapPin className="h-4 w-4 text-gold" />
-                      On-site address
+                      {t("book.onSiteAddress")}
                     </p>
 
                     <div className="space-y-2">
-                      <Label htmlFor="addressLine1">Street</Label>
+                      <Label htmlFor="addressLine1">{t("book.street")}</Label>
                       <Input
                         id="addressLine1"
                         value={addressLine1}
@@ -336,7 +361,7 @@ export function BookingForm({
 
                     <div className="grid gap-4 sm:grid-cols-2">
                       <div className="space-y-2">
-                        <Label htmlFor="addressCity">City</Label>
+                        <Label htmlFor="addressCity">{t("book.city")}</Label>
                         <Input
                           id="addressCity"
                           value={addressCity}
@@ -345,7 +370,7 @@ export function BookingForm({
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="addressPostalCode">Postal code</Label>
+                        <Label htmlFor="addressPostalCode">{t("book.postalCode")}</Label>
                         <Input
                           id="addressPostalCode"
                           value={addressPostalCode}
@@ -357,36 +382,34 @@ export function BookingForm({
                 ) : null}
 
                 <div className="space-y-2">
-                  <Label htmlFor="details">Item details</Label>
+                  <Label htmlFor="details">{t("book.itemDetails")}</Label>
                   <Input
                     id="details"
                     value={details}
                     onChange={(e) => setDetails(e.target.value)}
-                    placeholder="Size, stains, plate number..."
+                    placeholder={t("book.itemDetailsPlaceholder")}
                   />
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="notes">Notes</Label>
+                  <Label htmlFor="notes">{t("common.notes")}</Label>
                   <Textarea
                     id="notes"
                     value={notes}
                     onChange={(e) => setNotes(e.target.value)}
-                    placeholder="Anything else the shop should know?"
+                    placeholder={t("book.notesPlaceholder")}
                   />
                 </div>
               </div>
             </StepShell>
           ) : null}
 
-          {step === 2 ? (
-            <StepShell title="Pick a time" hint="Select a date and window that works for you.">
+          {currentStepId === "time" ? (
+            <StepShell title={t("book.pickTime")} hint={t("book.pickTimeHint")}>
               {days.length === 0 ? (
                 <div className="flex flex-col items-center gap-3 py-10 text-center">
                   <CalendarX2 className="h-8 w-8 text-faint" />
-                  <p className="text-sm text-ash">
-                    No open availability yet. Check back soon or contact the shop.
-                  </p>
+                  <p className="text-sm text-ash">{t("book.noSlots")}</p>
                 </div>
               ) : (
                 <div className="space-y-6">
@@ -409,13 +432,13 @@ export function BookingForm({
                           )}
                         >
                           <span className="text-[10px] font-medium uppercase tracking-wider">
-                            {day.date.toLocaleDateString(undefined, { weekday: "short" })}
+                            {day.date.toLocaleDateString(localeTag(locale), { weekday: "short" })}
                           </span>
                           <span className="font-display text-lg leading-none">
                             {day.date.getDate()}
                           </span>
                           <span className="text-[10px] uppercase">
-                            {day.date.toLocaleDateString(undefined, { month: "short" })}
+                            {day.date.toLocaleDateString(localeTag(locale), { month: "short" })}
                           </span>
                         </button>
                       );
@@ -439,69 +462,120 @@ export function BookingForm({
                               : "border-line bg-surface text-bone hover:border-gold/40 hover:bg-elevated",
                           )}
                         >
-                          {formatTime(slot.startsAt)}
+                          {formatTime(slot.startsAt, locale)}
                         </button>
                       );
                     })}
                   </div>
 
-                  <Alert tone="info">
-                    Only open windows are listed. The shop confirms your slot when it reviews the
-                    request.
-                  </Alert>
+                  <Alert tone="info">{t("book.onlyOpenWindows")}</Alert>
                 </div>
               )}
             </StepShell>
           ) : null}
 
-          {step === 3 ? (
-            <StepShell title="Confirm your booking" hint="Review before sending the request.">
+          {currentStepId === "day" ? (
+            <StepShell title={t("book.pickDayTitle")} hint={t("book.pickDayHint")}>
+              {availableDays.length === 0 ? (
+                <div className="flex flex-col items-center gap-3 py-10 text-center">
+                  <CalendarX2 className="h-8 w-8 text-faint" />
+                  <p className="text-sm text-ash">{t("book.noDays")}</p>
+                </div>
+              ) : (
+                <div className="flex flex-wrap gap-2">
+                  {availableDays.map((day) => {
+                    const active = day === requestedDate;
+                    const date = new Date(`${day}T12:00:00`);
+                    return (
+                      <button
+                        key={day}
+                        type="button"
+                        onClick={() => setRequestedDate(day)}
+                        aria-pressed={active}
+                        className={cn(
+                          "flex w-16 flex-col items-center gap-0.5 rounded-lg border px-2 py-2.5 transition-colors",
+                          active
+                            ? "border-gold bg-gold text-ink"
+                            : "border-line bg-surface text-ash hover:border-line-strong hover:text-bone",
+                        )}
+                      >
+                        <span className="text-[10px] font-medium uppercase tracking-wider">
+                          {date.toLocaleDateString(localeTag(locale), { weekday: "short" })}
+                        </span>
+                        <span className="font-display text-lg leading-none">{date.getDate()}</span>
+                        <span className="text-[10px] uppercase">
+                          {date.toLocaleDateString(localeTag(locale), { month: "short" })}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+            </StepShell>
+          ) : null}
+
+          {currentStepId === "confirm" ? (
+            <StepShell title={t("book.confirm")} hint={t("book.confirmHint")}>
               <dl className="divide-y divide-line overflow-hidden rounded-xl border border-line">
-                <SummaryRow label="Service" value={selectedService?.name ?? "—"} />
-                <SummaryRow label="Delivery" value={formatDeliveryMode(deliveryMode)} />
+                <SummaryRow
+                  label={t("common.service")}
+                  value={
+                    selectedService ? catalogName(selectedService.name, selectedService.id) : "—"
+                  }
+                />
+                <SummaryRow
+                  label={t("common.delivery")}
+                  value={formatDeliveryMode(deliveryMode, t)}
+                />
                 {itemTypeOptions.length > 0 ? (
                   <SummaryRow
-                    label="Item type"
-                    value={`${formatItemType(itemType)} × ${quantity}`}
+                    label={t("common.itemType")}
+                    value={`${formatItemType(itemType, t)} × ${quantity}`}
                   />
                 ) : (
-                  <SummaryRow label="Quantity" value={String(quantity)} />
+                  <SummaryRow label={t("common.quantity")} value={String(quantity)} />
                 )}
                 <SummaryRow
-                  label="Estimate"
+                  label={t("common.estimate")}
                   value={
                     selectedService
-                      ? formatPriceRange(selectedService.priceMin, selectedService.priceMax)
+                      ? formatPriceRange(selectedService.priceMin, selectedService.priceMax, locale)
                       : "—"
                   }
                 />
                 <SummaryRow
-                  label="Window"
+                  label={t("common.window")}
                   value={
                     selectedSlot
-                      ? `${new Date(selectedSlot.startsAt).toLocaleDateString(undefined, {
+                      ? `${new Date(selectedSlot.startsAt).toLocaleDateString(localeTag(locale), {
                           weekday: "short",
                           day: "numeric",
                           month: "short",
-                        })} · ${formatTime(selectedSlot.startsAt)} – ${formatTime(selectedSlot.endsAt)}`
-                      : "—"
+                        })} · ${formatTime(selectedSlot.startsAt, locale)} – ${formatTime(selectedSlot.endsAt, locale)}`
+                      : requestedDate
+                        ? formatDay(`${requestedDate}T12:00:00`, locale)
+                        : needsWindow
+                          ? "—"
+                          : t("common.toBeScheduled")
                   }
                 />
+                {!needsWindow ? (
+                  <div className="px-4 py-3 text-xs text-faint">{t("book.noWindowNeeded")}</div>
+                ) : null}
                 {deliveryMode === "ON_SITE" ? (
                   <SummaryRow
-                    label="Address"
+                    label={t("common.address")}
                     value={[addressLine1, addressCity, addressPostalCode]
                       .filter(Boolean)
                       .join(", ")}
                   />
                 ) : null}
-                {details ? <SummaryRow label="Details" value={details} /> : null}
-                {notes ? <SummaryRow label="Notes" value={notes} /> : null}
+                {details ? <SummaryRow label={t("common.details")} value={details} /> : null}
+                {notes ? <SummaryRow label={t("common.notes")} value={notes} /> : null}
               </dl>
 
               <Alert tone="info" className="mt-4">
-                Payment is cash on completion. You can cancel while the request is pending
-                or after approval (before the job starts).
+                {t("book.cashNote")}
               </Alert>
             </StepShell>
           ) : null}
@@ -511,69 +585,93 @@ export function BookingForm({
           <div className="mt-8 flex items-center justify-between gap-3 border-t border-line pt-5">
             <Button type="button" variant="ghost" onClick={goBack} disabled={step === 0}>
               <ArrowLeft className="h-4 w-4" />
-              Back
+              {t("common.back")}
             </Button>
 
-            {step < STEPS.length - 1 ? (
+            {currentStepId !== "confirm" ? (
               <Button type="button" onClick={goNext}>
-                Continue
+                {t("common.continue")}
                 <ArrowRight className="h-4 w-4" />
               </Button>
             ) : (
               <Button type="button" onClick={submit} disabled={isPending}>
-                {isPending ? "Sending request..." : "Request booking"}
+                {isPending ? t("book.sending") : t("book.requestBooking")}
               </Button>
             )}
           </div>
         </Card>
 
         <Card className="lg:sticky lg:top-28">
-          <p className="font-display text-lg text-bone">Order summary</p>
+          <p className="font-display text-lg text-bone">{t("book.orderSummary")}</p>
 
           <dl className="mt-4 space-y-3 text-sm">
-            <SummaryLine label="Service" value={selectedService?.name ?? "Not selected"} />
-            <SummaryLine label="Delivery" value={formatDeliveryMode(deliveryMode)} />
+            <SummaryLine
+              label={t("common.service")}
+              value={
+                selectedService
+                  ? catalogName(selectedService.name, selectedService.id)
+                  : t("common.notSelected")
+              }
+            />
+            <SummaryLine
+              label={t("common.delivery")}
+              value={formatDeliveryMode(deliveryMode, t)}
+            />
             {itemTypeOptions.length > 0 ? (
               <SummaryLine
-                label="Item type"
-                value={itemType ? formatItemType(itemType) : "Not selected"}
+                label={t("common.itemType")}
+                value={itemType ? formatItemType(itemType, t) : t("common.notSelected")}
               />
             ) : null}
-            <SummaryLine label="Quantity" value={String(quantity)} />
+            <SummaryLine label={t("common.quantity")} value={String(quantity)} />
             <SummaryLine
-              label="Window"
+              label={t("common.window")}
               value={
                 selectedSlot
-                  ? `${formatTime(selectedSlot.startsAt)} – ${formatTime(selectedSlot.endsAt)}`
-                  : "Not selected"
+                  ? `${formatTime(selectedSlot.startsAt, locale)} – ${formatTime(selectedSlot.endsAt, locale)}`
+                  : requestedDate
+                    ? formatDay(`${requestedDate}T12:00:00`, locale)
+                    : needsWindow
+                      ? t("common.notSelected")
+                      : t("common.toBeScheduled")
               }
             />
           </dl>
 
           <div className="mt-4 flex items-center justify-between border-t border-line pt-4">
-            <span className="text-sm text-ash">Estimate</span>
+            <span className="text-sm text-ash">{t("common.estimate")}</span>
             <span className="font-display text-xl text-gold">
               {selectedService
-                ? formatPriceRange(selectedService.priceMin, selectedService.priceMax)
+                ? formatPriceRange(selectedService.priceMin, selectedService.priceMax, locale)
                 : "—"}
             </span>
           </div>
-          <p className="mt-2 text-xs text-faint">Quoted as a range; paid in cash on completion.</p>
+          <p className="mt-2 text-xs text-faint">{t("book.rangeCash")}</p>
         </Card>
       </div>
     </div>
   );
 }
 
-function Stepper({ step }: { step: number }) {
+function Stepper({ step, stepIds }: { step: number; stepIds: StepId[] }) {
+  const { t } = useI18n();
+  const labels: Record<StepId, string> = {
+    service: t("book.stepService"),
+    details: t("book.stepDetails"),
+    time: t("book.stepTime"),
+    day: t("book.stepDay"),
+    confirm: t("book.stepConfirm"),
+  };
+  const steps = stepIds.map((id) => labels[id]);
+
   return (
     <ol className="flex items-center">
-      {STEPS.map((label, index) => {
+      {steps.map((label, index) => {
         const done = index < step;
         const current = index === step;
 
         return (
-          <li key={label} className={cn("flex items-center", index < STEPS.length - 1 && "flex-1")}>
+          <li key={label} className={cn("flex items-center", index < steps.length - 1 && "flex-1")}>
             <div className="flex flex-col items-center gap-2">
               <span
                 className={cn(
@@ -595,7 +693,7 @@ function Stepper({ step }: { step: number }) {
               </span>
             </div>
 
-            {index < STEPS.length - 1 ? (
+            {index < steps.length - 1 ? (
               <span
                 className={cn(
                   "mx-2 -mt-6 h-px flex-1 transition-colors",
