@@ -126,11 +126,25 @@ npm run db:wipe -- all --keep-admins --yes
 
 ## Deploy notes
 
-1. Managed Postgres + Supabase Auth + Vercel (or similar)
-2. Set production env vars and auth callback URLs
-3. Run migrations against production `DATABASE_URL`
-4. Seed catalog / promote admin once
-5. Never run `db:wipe --yes` against production without `--allow-remote` and a conscious decision
+Vercel runs `next build`, which loads `src/env.ts` and **fails immediately** if required vars are missing. Add them in **Project → Settings → Environment Variables** for Production and Preview, and leave them available at **Build Time**. Redeploy after saving.
+
+Required:
+
+| Variable | Example |
+| --- | --- |
+| `DATABASE_URL` | `postgresql://user:pass@host:5432/cleaning_app?sslmode=require` (app Postgres, **not** the Supabase Auth DB) |
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://xxxx.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Project API anon key |
+| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service_role key (server only) |
+
+Optional: `GMAIL_USER` + `GMAIL_APP_PASSWORD` (or `RESEND_API_KEY` + `NOTIFICATION_EMAIL_FROM`) for booking emails. Leave `ADMIN_BOOTSTRAP_EMAIL` unset after the first admin exists.
+
+Also:
+
+1. In the production Supabase project, set Site URL and redirect URLs to the Vercel domain (and `/auth/callback` if you use Google).
+2. Run migrations against production `DATABASE_URL` (`npm run db:migrate` with that URL).
+3. Seed the catalog and promote an admin once (`npm run db:seed`, `npm run db:promote-admin -- you@example.com`).
+4. Never run `db:wipe --yes` against production without `--allow-remote` and a conscious decision.
 
 ## License
 

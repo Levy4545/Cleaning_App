@@ -1,10 +1,23 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
+const postgresUrl = z
+  .string()
+  .trim()
+  .min(1)
+  .refine(
+    (value) => /^(postgres|postgresql):\/\//i.test(value),
+    "Must start with postgres:// or postgresql://",
+  );
+
 export const env = createEnv({
   server: {
-    DATABASE_URL: z.string().url(),
-    SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+    /**
+     * App Postgres (Drizzle). Not the Supabase Auth database.
+     * `z.string().url()` rejects many production URLs (special chars in passwords).
+     */
+    DATABASE_URL: postgresUrl,
+    SUPABASE_SERVICE_ROLE_KEY: z.string().trim().min(1),
     /**
      * Company Gmail / Google Workspace SMTP (recommended for auto emails).
      * Create an App Password at https://myaccount.google.com/apppasswords
@@ -35,8 +48,8 @@ export const env = createEnv({
     ADMIN_BOOTSTRAP_EMAIL: z.string().email().optional(),
   },
   client: {
-    NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
+    NEXT_PUBLIC_SUPABASE_URL: z.string().trim().url(),
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().trim().min(1),
   },
   runtimeEnv: {
     DATABASE_URL: process.env.DATABASE_URL,
@@ -57,4 +70,21 @@ export const env = createEnv({
   },
   skipValidation: process.env.SKIP_ENV_VALIDATION === "true",
   emptyStringAsUndefined: true,
+  onValidationError: (issues) => {
+    const lines = issues.map((issue) => {
+      const path = issue.path?.length ? issue.path.join(".") : "(unknown)";
+      return `  ${path}: ${issue.message}`;
+    });
+    console.error(
+      [
+        "Invalid environment variables:",
+        ...lines,
+        "",
+        "On Vercel: Project → Settings → Environment Variables.",
+        "Enable Production and Preview, and keep “available at Build Time”.",
+        "Required: DATABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY",
+      ].join("\n"),
+    );
+    throw new Error("Invalid environment variables");
+  },
 });
