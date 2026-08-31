@@ -8,6 +8,7 @@ const { url: supabaseUrl, anonKey: supabaseAnonKey } = applySupabasePublicEnv();
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
+  allowedDevOrigins: ["127.0.0.1", "localhost"],
   env: {
     ...(supabaseUrl
       ? { SUPABASE_URL: supabaseUrl, NEXT_PUBLIC_SUPABASE_URL: supabaseUrl }
