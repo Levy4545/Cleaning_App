@@ -53,7 +53,7 @@ assert(readPublicSupabaseConfig({}) === null, "missing keys → null (no throw)"
 
 assert(readPublicSupabaseConfig({ SUPABASE_URL: "not-a-url", SUPABASE_ANON_KEY: "x" }) === null, "invalid URL → null");
 
-const env: NodeJS.ProcessEnv = {
+const env: NodeJS.Dict<string | undefined> = {
   SUPABASE_URL: "https://from-secret.supabase.co",
   SUPABASE_ANON_KEY: "anon-from-secret",
 };

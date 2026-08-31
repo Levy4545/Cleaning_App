@@ -59,7 +59,9 @@ export function readPublicSupabaseConfig(
  * Copy unprefixed Secrets onto `NEXT_PUBLIC_*` so Next can inline them for the browser client.
  * Call from `next.config.ts` during build / `next dev`.
  */
-export function applySupabasePublicEnv(env: NodeJS.ProcessEnv = process.env): {
+export function applySupabasePublicEnv(
+  env: NodeJS.Dict<string | undefined> = process.env,
+): {
   url: string | undefined;
   anonKey: string | undefined;
 } {
