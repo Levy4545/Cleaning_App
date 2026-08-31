@@ -136,6 +136,12 @@ export const hu: Messages = {
     continueGoogle: "Folytatás Google-lal",
     redirecting: "Átirányítás...",
     authFailed: "A hitelesítés sikertelen. Próbálja újra.",
+    authNotConfigured:
+      "A bejelentkezés nincs beállítva. Adja hozzá a SUPABASE_URL és SUPABASE_ANON_KEY értékeket a Vercelen, majd telepítse újra.",
+    googleNotEnabled:
+      "A Google-bejelentkezés nincs engedélyezve. A Supabase-ben: Authentication → Sign In / Providers → Google, adja meg a Google Cloud kliensazonosítót és titkot, az URL Configuration alatt pedig: {origin}/auth/callback.",
+    googleStartFailed:
+      "A Google-bejelentkezés nem indult el. Ellenőrizze a SUPABASE_URL-t, és hogy a domain szerepel a Supabase átirányítási URL-jei között.",
   },
   dashboard: {
     title: "Irányítópult",

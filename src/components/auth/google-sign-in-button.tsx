@@ -3,6 +3,8 @@
 import { useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
+import { peekBrowserSupabaseConfig } from "@/lib/supabase/browser-config";
+import { readGoogleProviderEnabled } from "@/lib/supabase/provider-settings";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 
@@ -39,6 +41,10 @@ function GoogleIcon() {
   );
 }
 
+function failMessage(caught: unknown, fallback: string) {
+  return caught instanceof Error && caught.message ? caught.message : fallback;
+}
+
 /**
  * Renders a button that initiates Google sign-in.
  *
@@ -54,25 +60,54 @@ export function GoogleSignInButton({ redirectTo }: GoogleSignInButtonProps) {
     setLoading(true);
     setError(null);
 
-    const supabase = createClient();
-    const callback = new URL("/auth/callback", window.location.origin);
-    if (redirectTo) {
-      callback.searchParams.set("next", safeRedirectPath(redirectTo));
-    }
+    try {
+      const config = peekBrowserSupabaseConfig();
+      if (!config) {
+        setError(t("auth.authNotConfigured"));
+        setLoading(false);
+        return;
+      }
 
-    const { error: authError } = await supabase.auth.signInWithOAuth({
-      provider: "google",
-      options: {
-        redirectTo: callback.toString(),
-        queryParams: {
-          access_type: "offline",
-          prompt: "consent",
+      const googleEnabled = await readGoogleProviderEnabled(config);
+      if (googleEnabled === false) {
+        setError(t("auth.googleNotEnabled", { origin: window.location.origin }));
+        setLoading(false);
+        return;
+      }
+
+      const supabase = createClient();
+      const callback = new URL("/auth/callback", window.location.origin);
+      if (redirectTo) {
+        callback.searchParams.set("next", safeRedirectPath(redirectTo));
+      }
+
+      const { data, error: authError } = await supabase.auth.signInWithOAuth({
+        provider: "google",
+        options: {
+          redirectTo: callback.toString(),
+          skipBrowserRedirect: true,
+          queryParams: {
+            access_type: "offline",
+            prompt: "consent",
+          },
         },
-      },
-    });
+      });
 
-    if (authError) {
-      setError(authError.message);
+      if (authError) {
+        setError(authError.message);
+        setLoading(false);
+        return;
+      }
+
+      if (!data.url) {
+        setError(t("auth.googleStartFailed"));
+        setLoading(false);
+        return;
+      }
+
+      window.location.assign(data.url);
+    } catch (caught) {
+      setError(failMessage(caught, t("auth.googleStartFailed")));
       setLoading(false);
     }
   };
@@ -83,7 +118,7 @@ export function GoogleSignInButton({ redirectTo }: GoogleSignInButtonProps) {
         type="button"
         variant="secondary"
         className="w-full"
-        onClick={handleGoogleSignIn}
+        onClick={() => void handleGoogleSignIn()}
         disabled={loading}
       >
         <GoogleIcon />

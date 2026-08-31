@@ -132,6 +132,10 @@ export const en = {
     continueGoogle: "Continue with Google",
     redirecting: "Redirecting...",
     authFailed: "Authentication failed. Please try again.",
+    authNotConfigured: "Sign-in isn't configured. Add SUPABASE_URL and SUPABASE_ANON_KEY on Vercel, then redeploy.",
+    googleNotEnabled:
+      "Google sign-in isn't enabled. In Supabase go to Authentication → Sign In / Providers → Google, add your Google Cloud client ID and secret, and under URL Configuration add {origin}/auth/callback.",
+    googleStartFailed: "Couldn't start Google sign-in. Check SUPABASE_URL and that this domain is listed in Supabase redirect URLs.",
   },
   dashboard: {
     title: "Dashboard",
