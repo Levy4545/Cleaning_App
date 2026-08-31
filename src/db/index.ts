@@ -1,6 +1,6 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 
-import { env } from "@/env";
+import { resolveDatabaseUrl } from "./connection-url";
 import { createSqlClient } from "./sql";
 
 import * as schema from "./schema";
@@ -15,13 +15,7 @@ const globalForDb = globalThis as unknown as {
 
 function getDb(): AppDb {
   if (!globalForDb.db) {
-    const url = env.DATABASE_URL;
-    if (!url) {
-      throw new Error(
-        "DATABASE_URL is not set. On Vercel add the Supabase Connect → Transaction pooler URI (database password, port 6543).",
-      );
-    }
-    globalForDb.client = createSqlClient(url);
+    globalForDb.client = createSqlClient(resolveDatabaseUrl());
     globalForDb.db = drizzle(globalForDb.client, { schema });
   }
   return globalForDb.db;

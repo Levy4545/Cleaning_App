@@ -67,7 +67,7 @@ Default local DB:
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cleaning_app
 ```
 
-Also set Supabase keys in `.env.local` (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`). Optional: `ADMIN_BOOTSTRAP_EMAIL`, `NOTIFY_CHANNEL`, Resend/Twilio keys. `DATABASE_URL` is the Postgres URI (local Docker or, in production, the same Supabase project’s **Transaction pooler** string).
+Also set Supabase keys in `.env.local` (`SUPABASE_URL` + `SUPABASE_ANON_KEY`, or the `NEXT_PUBLIC_*` aliases). Optional: `ADMIN_BOOTSTRAP_EMAIL`, `NOTIFY_CHANNEL`, Resend/Twilio keys. `DATABASE_URL` is the Postgres URI (local Docker or, in production, the same Supabase project’s **Transaction pooler** string).
 
 Promote an admin after first login:
 
@@ -133,11 +133,20 @@ Production uses **one Supabase project**: Auth (URL + anon key) and app data (Po
 
 **Project → Settings → Environment Variables** — Production and Preview, available at **Build Time**. Redeploy after saving.
 
-| Variable | Where to copy it |
-| --- | --- |
-| `NEXT_PUBLIC_SUPABASE_URL` | Settings → API Keys → Project URL (`https://xxxx.supabase.co`) |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Settings → API Keys → `anon` / publishable key |
-| `DATABASE_URL` | **Connect** (green button) → **Transaction pooler** URI. Replace `[YOUR-PASSWORD]` with the **database password** from Settings → Database. Not the service_role key. Port should be **6543**. |
+Use **Secret** for all three. **Do not** name the Supabase keys `NEXT_PUBLIC_*` if the type is Secret — Vercel shows *“Remove the public framework prefix… If that’s safe, change the variable to Config.”*
+
+| Variable | Type | Where to copy it |
+| --- | --- | --- |
+| `SUPABASE_URL` | Secret | Settings → API Keys → Project URL (`https://xxxx.supabase.co`) |
+| `SUPABASE_ANON_KEY` | Secret | Settings → API Keys → `anon` / publishable key |
+| `DATABASE_URL` | Secret | **Connect** (green button) → **Transaction pooler** URI. Replace `[YOUR-PASSWORD]` with the **database password** from Settings → Database. Not the service_role key. Port should be **6543**. |
+
+The anon key is still sent to the browser (required for login). Unprefixed names only satisfy Vercel’s Secret UI. Never put the **database password** or **service_role** key in `SUPABASE_ANON_KEY`.
+
+If you already created `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY`, either:
+
+- delete them and re-add as `SUPABASE_URL` / `SUPABASE_ANON_KEY` (Secret), or
+- keep those names and switch the type to **Config** (not Secret).
 
 `POSTGRES_URL` is accepted as an alias of `DATABASE_URL`. Passwords with `@`, `#`, or `%` are encoded automatically.
 
