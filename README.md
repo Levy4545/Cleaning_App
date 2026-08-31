@@ -11,7 +11,7 @@ Customers book hybrid on-site / drop-off jobs; admins manage a week calendar, ap
 | Framework | Next.js 16 (App Router) |
 | UI | React 19, Tailwind CSS 4 (dark/gold “Master-Gold” theme) |
 | Auth | Supabase (email/password + Google OAuth) |
-| Database | PostgreSQL + Drizzle ORM migrations |
+| Database | PostgreSQL + Drizzle (production: same Supabase project as Auth; local: Docker) |
 | Validation | Zod |
 | Notifications | Resend / Twilio (or console stubs) |
 | Local DB | Docker Compose |
@@ -67,7 +67,7 @@ Default local DB:
 DATABASE_URL=postgresql://postgres:postgres@localhost:5432/cleaning_app
 ```
 
-Also set Supabase keys in `.env.local` (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`, `SUPABASE_SERVICE_ROLE_KEY`). Optional: `ADMIN_BOOTSTRAP_EMAIL`, `NOTIFY_CHANNEL`, Resend/Twilio keys.
+Also set Supabase keys in `.env.local` (`NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_ANON_KEY`). Optional: `ADMIN_BOOTSTRAP_EMAIL`, `NOTIFY_CHANNEL`, Resend/Twilio keys. `DATABASE_URL` is the Postgres URI (local Docker or, in production, the same Supabase project’s **Transaction pooler** string).
 
 Promote an admin after first login:
 
@@ -110,6 +110,7 @@ App mutations use Drizzle over `DATABASE_URL`; RLS covers direct Supabase client
 | `npm run typecheck` | `tsc --noEmit` |
 | `npm run db:generate` | Generate migrations |
 | `npm run db:migrate` | Apply migrations |
+| `npm run db:prepare` | Migrate + seed default shop (runs automatically on Vercel builds) |
 | `npm run db:studio` | Drizzle Studio |
 | `npm run db:seed` | Default shop + sample catalog |
 | `npm run db:promote-admin` | Promote user by email |
@@ -126,25 +127,34 @@ npm run db:wipe -- all --keep-admins --yes
 
 ## Deploy notes
 
-Vercel runs `next build`, which loads `src/env.ts` and **fails immediately** if required vars are missing. Add them in **Project → Settings → Environment Variables** for Production and Preview, and leave them available at **Build Time**. Redeploy after saving.
+Production uses **one Supabase project**: Auth (URL + anon key) and app data (Postgres URI from that same project). You do not need a second database host.
 
-Required:
+### Vercel environment variables
 
-| Variable | Example |
+**Project → Settings → Environment Variables** — Production and Preview, available at **Build Time**. Redeploy after saving.
+
+| Variable | Where to copy it |
 | --- | --- |
-| `DATABASE_URL` | `postgresql://user:pass@host:5432/cleaning_app?sslmode=require` (app Postgres, **not** the Supabase Auth DB) |
-| `NEXT_PUBLIC_SUPABASE_URL` | `https://xxxx.supabase.co` |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase Project API anon key |
-| `SUPABASE_SERVICE_ROLE_KEY` | Supabase service_role key (server only) |
+| `NEXT_PUBLIC_SUPABASE_URL` | Settings → API Keys → Project URL (`https://xxxx.supabase.co`) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Settings → API Keys → `anon` / publishable key |
+| `DATABASE_URL` | **Connect** (green button) → **Transaction pooler** URI. Replace `[YOUR-PASSWORD]` with the **database password** from Settings → Database. Not the service_role key. Port should be **6543**. |
 
-Optional: `GMAIL_USER` + `GMAIL_APP_PASSWORD` (or `RESEND_API_KEY` + `NOTIFICATION_EMAIL_FROM`) for booking emails. Leave `ADMIN_BOOTSTRAP_EMAIL` unset after the first admin exists.
+`POSTGRES_URL` is accepted as an alias of `DATABASE_URL`. Passwords with `@`, `#`, or `%` are encoded automatically.
+
+Optional: `GMAIL_USER` + `GMAIL_APP_PASSWORD` (or `RESEND_API_KEY` + `NOTIFICATION_EMAIL_FROM`) for booking emails. `ADMIN_BOOTSTRAP_EMAIL` promotes that user to admin on first login — leave unset after you have a real admin.
+
+`SUPABASE_SERVICE_ROLE_KEY` is optional (the app does not use it today).
+
+### What the deploy does
+
+`npm run build` on Vercel runs migrations and creates the default shop + sample catalog if they are missing. Then it builds Next.js.
 
 Also:
 
-1. In the production Supabase project, set Site URL and redirect URLs to the Vercel domain (and `/auth/callback` if you use Google).
-2. Run migrations against production `DATABASE_URL` (`npm run db:migrate` with that URL).
-3. Seed the catalog and promote an admin once (`npm run db:seed`, `npm run db:promote-admin -- you@example.com`).
-4. Never run `db:wipe --yes` against production without `--allow-remote` and a conscious decision.
+1. In the production Supabase project, set **Site URL** and redirect URLs to the Vercel domain (`https://your-app.vercel.app/auth/callback` for Google).
+2. After the first login, promote an admin if you did not set `ADMIN_BOOTSTRAP_EMAIL`: `npm run db:promote-admin -- you@example.com` with production `DATABASE_URL`.
+3. Never run `db:wipe --yes` against production without `--allow-remote` and a conscious decision.
+4. If logs say `password authentication failed for user "postgres"`, `DATABASE_URL` still has the wrong database password (or the local `postgres:postgres` default).
 
 ## License
 

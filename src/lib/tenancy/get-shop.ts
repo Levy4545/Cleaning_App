@@ -28,6 +28,28 @@ export async function getDefaultShop(): Promise<Shop> {
     return bySlug;
   }
 
+  try {
+    const [created] = await db
+      .insert(shops)
+      .values({
+        id: DEFAULT_SHOP_ID,
+        name: "Cleaning App",
+        slug: DEFAULT_SHOP_SLUG,
+        subdomain: DEFAULT_SHOP_SLUG,
+        status: "ACTIVE",
+        themeConfig: { primaryColor: "#c9a227", layout: "classic" },
+      })
+      .returning();
+    if (created) return created;
+  } catch {
+    const [retry] = await db
+      .select()
+      .from(shops)
+      .where(eq(shops.id, DEFAULT_SHOP_ID))
+      .limit(1);
+    if (retry) return retry;
+  }
+
   throw new Error(
     `Default shop not found. Run migrations/seed so shop ${DEFAULT_SHOP_ID} exists.`,
   );

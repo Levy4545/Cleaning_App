@@ -6,9 +6,14 @@
  */
 import { eq } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/postgres-js";
-import postgres from "postgres";
+import dotenv from "dotenv";
 
 import { users } from "../src/db/schema";
+import { resolveDatabaseUrl } from "../src/db/connection-url";
+import { createSqlClient } from "../src/db/sql";
+
+dotenv.config({ path: ".env.local" });
+dotenv.config();
 
 async function main() {
   const email = process.argv[2]?.trim().toLowerCase();
@@ -16,12 +21,8 @@ async function main() {
     throw new Error("Usage: tsx scripts/promote-admin.ts <email>");
   }
 
-  const url = process.env.DATABASE_URL;
-  if (!url) {
-    throw new Error("DATABASE_URL is required");
-  }
-
-  const client = postgres(url, { max: 1 });
+  const url = resolveDatabaseUrl();
+  const client = createSqlClient(url, { max: 1 });
   const db = drizzle(client);
 
   const [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);

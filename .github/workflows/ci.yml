@@ -38,4 +38,3 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cleaning_app
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: example-anon-key
-          SUPABASE_SERVICE_ROLE_KEY: example-service-role-key

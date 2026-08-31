@@ -1,6 +1,8 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
+import { readRawDatabaseUrl, normalizeDatabaseUrl } from "./db/connection-url";
+
 const postgresUrl = z
   .string()
   .trim()
@@ -10,14 +12,25 @@ const postgresUrl = z
     "Must start with postgres:// or postgresql://",
   );
 
+function databaseUrlFromEnv() {
+  const raw = readRawDatabaseUrl();
+  if (!raw) return undefined;
+  try {
+    return normalizeDatabaseUrl(raw);
+  } catch {
+    return raw;
+  }
+}
+
 export const env = createEnv({
   server: {
     /**
-     * App Postgres (Drizzle). Not the Supabase Auth database.
-     * `z.string().url()` rejects many production URLs (special chars in passwords).
+     * App Postgres (Drizzle). In production this is usually the same Supabase
+     * project as Auth — copy Connect → Transaction pooler (database password).
      */
     DATABASE_URL: postgresUrl,
-    SUPABASE_SERVICE_ROLE_KEY: z.string().trim().min(1),
+    /** Optional. Unused by the app today; set it if you add admin Supabase APIs. */
+    SUPABASE_SERVICE_ROLE_KEY: z.string().trim().min(1).optional(),
     /**
      * Company Gmail / Google Workspace SMTP (recommended for auto emails).
      * Create an App Password at https://myaccount.google.com/apppasswords
@@ -52,7 +65,7 @@ export const env = createEnv({
     NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().trim().min(1),
   },
   runtimeEnv: {
-    DATABASE_URL: process.env.DATABASE_URL,
+    DATABASE_URL: databaseUrlFromEnv(),
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     GMAIL_USER: process.env.GMAIL_USER,
     GMAIL_APP_PASSWORD: process.env.GMAIL_APP_PASSWORD,
@@ -82,7 +95,8 @@ export const env = createEnv({
         "",
         "On Vercel: Project → Settings → Environment Variables.",
         "Enable Production and Preview, and keep “available at Build Time”.",
-        "Required: DATABASE_URL, SUPABASE_SERVICE_ROLE_KEY, NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "Required: DATABASE_URL (or POSTGRES_URL), NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "DATABASE_URL is the Postgres URI from Supabase → Connect → Transaction pooler (database password, not the service_role key).",
       ].join("\n"),
     );
     throw new Error("Invalid environment variables");

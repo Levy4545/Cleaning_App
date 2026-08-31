@@ -4,7 +4,10 @@ import "./src/env";
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
-  output: "standalone",
 };
+
+if (!process.env.VERCEL) {
+  nextConfig.output = "standalone";
+}
 
 export default nextConfig;
