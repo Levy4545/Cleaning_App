@@ -2,6 +2,7 @@ import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
 import { readRawDatabaseUrl, normalizeDatabaseUrl } from "./db/connection-url";
+import { readSupabaseAnonKey, readSupabaseUrl } from "./lib/supabase/env-keys";
 
 const postgresUrl = z
   .string()
@@ -61,6 +62,7 @@ export const env = createEnv({
     ADMIN_BOOTSTRAP_EMAIL: z.string().email().optional(),
   },
   client: {
+    // Filled from SUPABASE_URL / SUPABASE_ANON_KEY (Vercel Secrets) or NEXT_PUBLIC_* aliases.
     NEXT_PUBLIC_SUPABASE_URL: z.string().trim().url(),
     NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().trim().min(1),
   },
@@ -78,8 +80,8 @@ export const env = createEnv({
     TWILIO_FROM_NUMBER: process.env.TWILIO_FROM_NUMBER,
     NOTIFY_CHANNEL: process.env.NOTIFY_CHANNEL,
     ADMIN_BOOTSTRAP_EMAIL: process.env.ADMIN_BOOTSTRAP_EMAIL,
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
+    NEXT_PUBLIC_SUPABASE_URL: readSupabaseUrl(),
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: readSupabaseAnonKey(),
   },
   skipValidation:
     process.env.SKIP_ENV_VALIDATION === "true" ||
@@ -98,7 +100,9 @@ export const env = createEnv({
         "",
         "On Vercel: Project → Settings → Environment Variables.",
         "Enable Production and Preview, and keep “available at Build Time”.",
-        "Required: DATABASE_URL (or POSTGRES_URL), NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "Required: DATABASE_URL (or POSTGRES_URL), SUPABASE_URL, SUPABASE_ANON_KEY",
+        "On Vercel add SUPABASE_URL and SUPABASE_ANON_KEY as Secrets (no NEXT_PUBLIC_ prefix).",
+        "NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY still work locally, or as Vercel Config.",
         "DATABASE_URL is the Postgres URI from Supabase → Connect → Transaction pooler (database password, not the service_role key).",
       ].join("\n"),
     );

@@ -26,6 +26,12 @@ jobs:
       - name: Check database URL helpers
         run: npx tsx scripts/check-connection-url.ts
 
+      - name: Check Supabase env aliases
+        run: npx tsx scripts/check-supabase-env.ts
+
+      - name: Check middleware loads without DATABASE_URL
+        run: npx tsx scripts/check-middleware-env.ts
+
       - name: Lint
         run: npm run lint
 
