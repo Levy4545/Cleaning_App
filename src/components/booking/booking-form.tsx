@@ -127,10 +127,9 @@ export function BookingForm({
   const currentStepId = stepIds[step] ?? "service";
   const needsWindow = selectedService?.requiresTimeWindow !== false;
 
-  const availableModes = useMemo(() => {
-    const modes = selectedService?.deliveryModes ?? ["DROP_OFF"];
-    return modes.filter((m): m is DeliveryMode => m === "ON_SITE" || m === "DROP_OFF");
-  }, [selectedService]);
+  const availableModes = (selectedService?.deliveryModes ?? ["DROP_OFF"]).filter(
+    (m): m is DeliveryMode => m === "ON_SITE" || m === "DROP_OFF",
+  );
 
   const days = useMemo(() => {
     const groups = new Map<string, { date: Date; slots: SlotOption[] }>();
