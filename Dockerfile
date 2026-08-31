@@ -11,6 +11,8 @@ FROM base AS builder
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 ENV NEXT_TELEMETRY_DISABLED=1
+ENV SKIP_ENV_VALIDATION=true
+ENV SKIP_DB_PREPARE=true
 RUN npm run build
 
 FROM base AS runner

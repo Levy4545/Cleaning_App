@@ -38,6 +38,6 @@ The update script only runs `npm install`. Everything below must be started manu
 - Running `supabase start` creates a generated `supabase/.temp/` tree that is **not** in the ESLint ignore list, so `npm run lint` will report hundreds of errors from a minified `supabase/.temp/.../index.ts`. Those are not repo issues (CI has no Supabase temp dir). To lint only the app code, run `npx eslint . --ignore-pattern "supabase/**"`, or lint before starting Supabase.
 - There is no automated test suite in this repo.
 
-### Known pre-existing bug (not an environment issue)
+### Production (Vercel)
 
-`/admin/calendar` (`src/components/admin/week-calendar.tsx`) uses `useSyncExternalStore` with `getSnapshot: () => Date.now()`, which returns a new value every render and triggers a "Maximum update depth exceeded" infinite re-render. The rest of the app (customer booking flow and the `/admin/appointments` inbox, which is where you approve/reject/complete) works fine. Create availability slots via the DB or the `createAvailabilitySlot` server action rather than relying on the calendar UI.
+Hosted deploys use **one** Supabase project: Auth keys plus `DATABASE_URL` from **Connect → Transaction pooler** (database password, port 6543). `npm run build` on Vercel applies migrations and seeds the default shop. Local Cloud VMs still use Docker Postgres + local Supabase Auth as described above.

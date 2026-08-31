@@ -21,8 +21,14 @@
  *   --allow-remote     Required when DATABASE_URL host is not localhost
  */
 import postgres from "postgres";
+import dotenv from "dotenv";
 
 import { DEFAULT_SHOP_ID } from "../src/db/schema";
+import { isLocalDatabaseHost, resolveDatabaseUrl } from "../src/db/connection-url";
+import { createSqlClient } from "../src/db/sql";
+
+dotenv.config({ path: ".env.local" });
+dotenv.config();
 
 const TARGETS = [
   "appointments",
@@ -100,10 +106,9 @@ Examples:
  * @param url - The database URL to inspect
  * @returns `true` if the URL host is `localhost`, `127.0.0.1`, or `::1`, `false` otherwise
  */
-function isLocalDatabaseHost(url: string) {
+function isLocalDatabaseUrl(url: string) {
   try {
-    const host = new URL(url).hostname.toLowerCase();
-    return host === "localhost" || host === "127.0.0.1" || host === "::1";
+    return isLocalDatabaseHost(new URL(url).hostname);
   } catch {
     return false;
   }
@@ -216,12 +221,9 @@ async function main() {
     return;
   }
 
-  const url = process.env.DATABASE_URL;
-  if (!url) {
-    throw new Error("DATABASE_URL is required");
-  }
+  const url = resolveDatabaseUrl();
 
-  if (!isLocalDatabaseHost(url) && !parsed.allowRemote) {
+  if (!isLocalDatabaseUrl(url) && !parsed.allowRemote) {
     let host = "(unparseable)";
     try {
       host = new URL(url).hostname;
@@ -233,7 +235,7 @@ async function main() {
     );
   }
 
-  const sql = postgres(url, { max: 1 });
+  const sql = createSqlClient(url, { max: 1 });
   const plan = expandTargets(parsed.targets);
   const shopFilter = parsed.shopId;
   const shopClause = shopFilter ? "AND shop_id = $1" : "";

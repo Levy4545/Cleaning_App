@@ -1,10 +1,36 @@
 import { createEnv } from "@t3-oss/env-nextjs";
 import { z } from "zod";
 
+import { readRawDatabaseUrl, normalizeDatabaseUrl } from "./db/connection-url";
+
+const postgresUrl = z
+  .string()
+  .trim()
+  .min(1)
+  .refine(
+    (value) => /^(postgres|postgresql):\/\//i.test(value),
+    "Must start with postgres:// or postgresql://",
+  );
+
+function databaseUrlFromEnv() {
+  const raw = readRawDatabaseUrl();
+  if (!raw) return undefined;
+  try {
+    return normalizeDatabaseUrl(raw);
+  } catch {
+    return raw;
+  }
+}
+
 export const env = createEnv({
   server: {
-    DATABASE_URL: z.string().url(),
-    SUPABASE_SERVICE_ROLE_KEY: z.string().min(1),
+    /**
+     * App Postgres (Drizzle). In production this is usually the same Supabase
+     * project as Auth — copy Connect → Transaction pooler (database password).
+     */
+    DATABASE_URL: postgresUrl,
+    /** Optional. Unused by the app today; set it if you add admin Supabase APIs. */
+    SUPABASE_SERVICE_ROLE_KEY: z.string().trim().min(1).optional(),
     /**
      * Company Gmail / Google Workspace SMTP (recommended for auto emails).
      * Create an App Password at https://myaccount.google.com/apppasswords
@@ -35,11 +61,11 @@ export const env = createEnv({
     ADMIN_BOOTSTRAP_EMAIL: z.string().email().optional(),
   },
   client: {
-    NEXT_PUBLIC_SUPABASE_URL: z.string().url(),
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().min(1),
+    NEXT_PUBLIC_SUPABASE_URL: z.string().trim().url(),
+    NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().trim().min(1),
   },
   runtimeEnv: {
-    DATABASE_URL: process.env.DATABASE_URL,
+    DATABASE_URL: databaseUrlFromEnv(),
     SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY,
     GMAIL_USER: process.env.GMAIL_USER,
     GMAIL_APP_PASSWORD: process.env.GMAIL_APP_PASSWORD,
@@ -57,4 +83,22 @@ export const env = createEnv({
   },
   skipValidation: process.env.SKIP_ENV_VALIDATION === "true",
   emptyStringAsUndefined: true,
+  onValidationError: (issues) => {
+    const lines = issues.map((issue) => {
+      const path = issue.path?.length ? issue.path.join(".") : "(unknown)";
+      return `  ${path}: ${issue.message}`;
+    });
+    console.error(
+      [
+        "Invalid environment variables:",
+        ...lines,
+        "",
+        "On Vercel: Project → Settings → Environment Variables.",
+        "Enable Production and Preview, and keep “available at Build Time”.",
+        "Required: DATABASE_URL (or POSTGRES_URL), NEXT_PUBLIC_SUPABASE_URL, NEXT_PUBLIC_SUPABASE_ANON_KEY",
+        "DATABASE_URL is the Postgres URI from Supabase → Connect → Transaction pooler (database password, not the service_role key).",
+      ].join("\n"),
+    );
+    throw new Error("Invalid environment variables");
+  },
 });
