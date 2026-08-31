@@ -29,6 +29,9 @@ jobs:
       - name: Check Supabase env aliases
         run: npx tsx scripts/check-supabase-env.ts
 
+      - name: Check middleware loads without DATABASE_URL
+        run: npx tsx scripts/check-middleware-env.ts
+
       - name: Lint
         run: npm run lint
 
