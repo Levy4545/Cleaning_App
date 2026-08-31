@@ -81,7 +81,10 @@ export const env = createEnv({
     NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL,
     NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY,
   },
-  skipValidation: process.env.SKIP_ENV_VALIDATION === "true",
+  skipValidation:
+    process.env.SKIP_ENV_VALIDATION === "true" ||
+    // `npm run build` must compile on Vercel even if a linked project is missing env.
+    process.env.npm_lifecycle_event === "build",
   emptyStringAsUndefined: true,
   onValidationError: (issues) => {
     const lines = issues.map((issue) => {

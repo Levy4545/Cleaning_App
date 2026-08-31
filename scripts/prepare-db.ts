@@ -34,9 +34,13 @@ async function main() {
 
   let url: string;
   try {
-    url = resolveDatabaseUrl();
+    url =     resolveDatabaseUrl();
   } catch (error) {
     console.error(error instanceof Error ? error.message : error);
+    if (process.env.VERCEL === "1" && process.env.REQUIRE_DB_PREPARE !== "true") {
+      console.error("Continuing Vercel build without migrations.");
+      return;
+    }
     process.exit(1);
   }
 
@@ -60,6 +64,14 @@ async function main() {
   } catch (error) {
     console.error(explainDatabaseError(error));
     console.error(error);
+    // Vercel build machines must still compile Next.js even if Postgres is
+    // unreachable (wrong password, IPv6-only host, pooler timeout).
+    if (process.env.VERCEL === "1" && process.env.REQUIRE_DB_PREPARE !== "true") {
+      console.error(
+        "Continuing Vercel build without migrations. Fix DATABASE_URL (Connect → Transaction pooler, database password) and redeploy.",
+      );
+      return;
+    }
     process.exit(1);
   } finally {
     await client.end({ timeout: 5 });
