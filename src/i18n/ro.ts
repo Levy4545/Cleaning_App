@@ -136,6 +136,12 @@ export const ro: Messages = {
     continueGoogle: "Continuă cu Google",
     redirecting: "Se redirecționează...",
     authFailed: "Autentificarea a eșuat. Încearcă din nou.",
+    authNotConfigured:
+      "Autentificarea nu este configurată. Adaugă SUPABASE_URL și SUPABASE_ANON_KEY pe Vercel, apoi redepune.",
+    googleNotEnabled:
+      "Autentificarea cu Google nu este activată. În Supabase: Authentication → Sign In / Providers → Google, adaugă client ID și secret din Google Cloud, iar la URL Configuration pune {origin}/auth/callback.",
+    googleStartFailed:
+      "Nu am putut porni autentificarea Google. Verifică SUPABASE_URL și că domeniul este în lista de redirect URLs din Supabase.",
   },
   dashboard: {
     title: "Panou",

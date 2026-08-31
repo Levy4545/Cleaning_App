@@ -4,6 +4,8 @@ import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import { I18nProvider } from "@/i18n/provider";
 import { getCatalogTranslationMap, getRequestLocale } from "@/i18n/server";
+import { readPublicSupabaseConfig } from "@/lib/supabase/env-keys";
+import { SupabaseBrowserConfig } from "@/lib/supabase/supabase-browser-config";
 
 import "./globals.css";
 
@@ -33,10 +35,12 @@ export default async function RootLayout({
     getRequestLocale(),
     getCatalogTranslationMap(),
   ]);
+  const supabase = readPublicSupabaseConfig();
 
   return (
     <html lang={locale} className={`${inter.variable} ${playfair.variable}`}>
       <body className="min-h-screen bg-ink font-sans text-bone antialiased">
+        {supabase ? <SupabaseBrowserConfig url={supabase.url} anonKey={supabase.anonKey} /> : null}
         <I18nProvider initialLocale={locale} catalog={catalog}>
           {children}
         </I18nProvider>

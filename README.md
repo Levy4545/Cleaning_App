@@ -160,7 +160,13 @@ Optional: `GMAIL_USER` + `GMAIL_APP_PASSWORD` (or `RESEND_API_KEY` + `NOTIFICATI
 
 Also:
 
-1. In the production Supabase project, set **Site URL** and redirect URLs to the Vercel domain (`https://your-app.vercel.app/auth/callback` for Google).
+1. **Google login** — in the production Supabase project:
+   - Authentication → Sign In / Providers → **Google**: enable it and paste the Google Cloud **Web application** client ID and secret.
+   - Google Cloud authorized redirect URI must be exactly `https://<project-ref>.supabase.co/auth/v1/callback` (shown on that Supabase screen).
+   - Authentication → URL Configuration:
+     - Site URL: `https://your-app.vercel.app`
+     - Redirect URLs: `https://your-app.vercel.app/auth/callback` and `https://your-app.vercel.app/**`
+   - If the button stays on “Redirecting…” and never leaves the page, Google is not enabled or this domain is missing from Redirect URLs. Email/password login still works.
 2. After the first login, promote an admin if you did not set `ADMIN_BOOTSTRAP_EMAIL`: `npm run db:promote-admin -- you@example.com` with production `DATABASE_URL`.
 3. Never run `db:wipe --yes` against production without `--allow-remote` and a conscious decision.
 4. If logs say `password authentication failed for user "postgres"`, `DATABASE_URL` still has the wrong database password (or the local `postgres:postgres` default).
