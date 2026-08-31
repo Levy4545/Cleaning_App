@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Inter, Playfair_Display } from "next/font/google";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 
 import { I18nProvider } from "@/i18n/provider";
 import { getCatalogTranslationMap, getRequestLocale } from "@/i18n/server";
@@ -39,6 +40,7 @@ export default async function RootLayout({
         <I18nProvider initialLocale={locale} catalog={catalog}>
           {children}
         </I18nProvider>
+        <SpeedInsights />
       </body>
     </html>
   );
