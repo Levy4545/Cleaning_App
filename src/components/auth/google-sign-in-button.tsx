@@ -34,7 +34,9 @@ function GoogleIcon() {
  */
 export function GoogleSignInButton() {
   const { t } = useI18n();
-  const href = googleOAuthStartUrl() ?? "";
+  // Direct NEXT_PUBLIC_* access so Next.js inlines it for the browser.
+  const href =
+    googleOAuthStartUrl({ NEXT_PUBLIC_SITE_URL: process.env.NEXT_PUBLIC_SITE_URL }) ?? "";
 
   if (!href) {
     return <Alert>{t("auth.siteUrlMissing")}</Alert>;
