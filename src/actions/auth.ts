@@ -26,6 +26,7 @@ import {
 } from "@/validators/auth";
 import { getDefaultShopId } from "@/lib/tenancy/get-shop";
 import { homePathForRole } from "@/lib/auth/home-path";
+import { resolvePublicSiteUrl } from "@/lib/auth/public-site";
 import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { env } from "@/env";
 
@@ -111,8 +112,12 @@ export async function resetPassword(
   }
 
   const supabase = await createClient();
+  const site = resolvePublicSiteUrl();
+  if (!site) {
+    return { success: false, error: "NEXT_PUBLIC_SITE_URL is not set to the live site." };
+  }
   const { error } = await supabase.auth.resetPasswordForEmail(parsed.data.email, {
-    redirectTo: `${process.env.NEXT_PUBLIC_SITE_URL ?? "http://localhost:3000"}/auth/callback?next=/settings`,
+    redirectTo: `${site}/auth/callback`,
   });
 
   if (error) {

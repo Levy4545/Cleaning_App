@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 
 import { getCurrentUser, syncUserFromAuth } from "@/actions/auth";
 import { homePathForRole } from "@/lib/auth/home-path";
-import { safeRedirectPath } from "@/lib/auth/safe-redirect";
+import { resolvePublicSiteUrl } from "@/lib/auth/public-site";
 import { createClient } from "@/lib/supabase/server";
 
-function loginErrorRedirect(origin: string, error: string, description?: string | null) {
-  const url = new URL("/login", origin);
+function loginRedirect(site: string, error: string, description?: string | null) {
+  const url = new URL("/login", site);
   url.searchParams.set("error", error);
   if (description) {
     url.searchParams.set("error_description", description.slice(0, 300));
@@ -15,23 +15,29 @@ function loginErrorRedirect(origin: string, error: string, description?: string 
 }
 
 /**
- * Handles an authentication callback and redirects the user to the requested or role-based destination.
- *
- * @returns A redirect response to the destination after successful authentication, or to the login page with an authentication error.
+ * Completes Google OAuth on the live site and sends the user to the dashboard.
  */
 export async function GET(request: Request) {
-  const { searchParams, origin } = new URL(request.url);
-  const code = searchParams.get("code");
-  const requestedNext = searchParams.get("next");
-  const oauthError = searchParams.get("error");
-  const oauthDescription = searchParams.get("error_description");
+  const requestUrl = new URL(request.url);
+  const site = resolvePublicSiteUrl();
+  const here = requestUrl.origin;
+
+  if (site && here !== site) {
+    return NextResponse.redirect(`${site}/login`);
+  }
+
+  const destination = site ?? here;
+
+  const code = requestUrl.searchParams.get("code");
+  const oauthError = requestUrl.searchParams.get("error");
+  const oauthDescription = requestUrl.searchParams.get("error_description");
 
   if (oauthError && !code) {
-    return loginErrorRedirect(origin, oauthError, oauthDescription);
+    return loginRedirect(destination, oauthError, oauthDescription);
   }
 
   if (!code) {
-    return loginErrorRedirect(origin, "auth");
+    return loginRedirect(destination, "auth");
   }
 
   try {
@@ -39,7 +45,7 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
       console.error("OAuth code exchange failed:", error.message);
-      return loginErrorRedirect(origin, "auth", error.message);
+      return loginRedirect(destination, "auth", error.message);
     }
 
     try {
@@ -49,12 +55,11 @@ export async function GET(request: Request) {
     }
 
     const current = await getCurrentUser().catch(() => null);
-    const fallback = homePathForRole(current?.role ?? "USER");
-    const next = requestedNext ? safeRedirectPath(requestedNext, fallback) : fallback;
-    return NextResponse.redirect(`${origin}${next}`);
+    const home = homePathForRole(current?.role ?? "USER");
+    return NextResponse.redirect(`${destination}${home}`);
   } catch (caught) {
     console.error("OAuth callback failed:", caught);
     const message = caught instanceof Error ? caught.message : undefined;
-    return loginErrorRedirect(origin, "auth", message);
+    return loginRedirect(destination, "auth", message);
   }
 }

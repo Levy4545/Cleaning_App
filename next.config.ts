@@ -1,10 +1,10 @@
 import type { NextConfig } from "next";
 
+import { applyPublicSiteUrl } from "./src/lib/auth/public-site";
 import { applySupabasePublicEnv } from "./src/lib/supabase/env-keys";
 
-// Vercel Secrets cannot use the NEXT_PUBLIC_ prefix. Copy SUPABASE_URL /
-// SUPABASE_ANON_KEY onto NEXT_PUBLIC_* so the browser auth client still works.
 const { url: supabaseUrl, anonKey: supabaseAnonKey } = applySupabasePublicEnv();
+const siteUrl = applyPublicSiteUrl();
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -19,6 +19,7 @@ const nextConfig: NextConfig = {
           NEXT_PUBLIC_SUPABASE_ANON_KEY: supabaseAnonKey,
         }
       : {}),
+    ...(siteUrl ? { NEXT_PUBLIC_SITE_URL: siteUrl, SITE_URL: siteUrl } : {}),
   },
 };
 
