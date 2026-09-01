@@ -29,6 +29,9 @@ jobs:
       - name: Check Supabase env aliases
         run: npx tsx scripts/check-supabase-env.ts
 
+      - name: Check public site URL helpers
+        run: npx tsx scripts/check-public-site.ts
+
       - name: Check middleware loads without DATABASE_URL
         run: npx tsx scripts/check-middleware-env.ts
 
@@ -47,3 +50,4 @@ jobs:
           DATABASE_URL: postgresql://postgres:postgres@localhost:5432/cleaning_app
           NEXT_PUBLIC_SUPABASE_URL: https://example.supabase.co
           NEXT_PUBLIC_SUPABASE_ANON_KEY: example-anon-key
+          NEXT_PUBLIC_SITE_URL: https://example.vercel.app

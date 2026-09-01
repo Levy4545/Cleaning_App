@@ -144,6 +144,8 @@ export const ro: Messages = {
       "Aplicația folosește Auth local ({authUrl}), nu proiectul Supabase găzduit. Datele Google din dashboard-ul cloud nu se aplică aici. Pune SUPABASE_URL pe https://xxxx.supabase.co în .env.local sau activează [auth.external.google] în supabase/config.toml, adaugă http://127.0.0.1:54321/auth/v1/callback în Google Cloud, apoi repornește supabase start.",
     googleStartFailed:
       "Nu am putut porni autentificarea Google. Verifică SUPABASE_URL și că domeniul este în lista de redirect URLs din Supabase.",
+    siteUrlMissing:
+      "Setează NEXT_PUBLIC_SITE_URL la site-ul live (https://your-app.vercel.app). Autentificarea Google se încheie acolo, nu pe localhost.",
   },
   dashboard: {
     title: "Panou",

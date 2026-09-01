@@ -95,7 +95,7 @@ export function LoginForm() {
         <div className="h-px flex-1 bg-line" />
       </div>
 
-      <GoogleSignInButton redirectTo={redirectTo ?? undefined} />
+      <GoogleSignInButton />
 
       <p className="mt-7 text-center text-sm text-ash">
         {t("auth.noAccount")}{" "}

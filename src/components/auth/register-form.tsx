@@ -91,7 +91,7 @@ export function RegisterForm() {
         <div className="h-px flex-1 bg-line" />
       </div>
 
-      <GoogleSignInButton redirectTo="/dashboard" />
+      <GoogleSignInButton />
 
       <p className="mt-7 text-center text-sm text-ash">
         {t("auth.haveAccount")}{" "}

@@ -1,24 +1,9 @@
 "use client";
 
-import { useState } from "react";
-
-import { createClient } from "@/lib/supabase/client";
-import { peekBrowserSupabaseConfig } from "@/lib/supabase/browser-config";
-import { isLocalSupabaseUrl } from "@/lib/supabase/env-keys";
-import { readGoogleProviderEnabled } from "@/lib/supabase/provider-settings";
+import { buttonClasses } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
-import { Button } from "@/components/ui/button";
-
 import { useI18n } from "@/i18n/provider";
-import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 
-type GoogleSignInButtonProps = {
-  redirectTo?: string;
-};
-
-/**
- * Renders the Google brand icon.
- */
 function GoogleIcon() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="h-4 w-4">
@@ -42,95 +27,23 @@ function GoogleIcon() {
   );
 }
 
-function failMessage(caught: unknown, fallback: string) {
-  return caught instanceof Error && caught.message ? caught.message : fallback;
-}
-
 /**
- * Renders a button that initiates Google sign-in.
- *
- * @param redirectTo - Optional destination to navigate to after authentication
- * @returns The Google sign-in button and any authentication error message
+ * Sends the browser to the live site to start Google OAuth.
+ * Never uses localhost as the OAuth redirect — after Gmail the user lands on the real dashboard.
  */
-export function GoogleSignInButton({ redirectTo }: GoogleSignInButtonProps) {
+export function GoogleSignInButton() {
   const { t } = useI18n();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const site = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
+  const href = site ? `${site}/auth/google` : "";
 
-  const handleGoogleSignIn = async () => {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const config = peekBrowserSupabaseConfig();
-      if (!config) {
-        setError(t("auth.authNotConfigured"));
-        setLoading(false);
-        return;
-      }
-
-      const googleEnabled = await readGoogleProviderEnabled(config);
-      if (googleEnabled === false) {
-        setError(
-          t(isLocalSupabaseUrl(config.url) ? "auth.googleNotEnabledLocal" : "auth.googleNotEnabled", {
-            origin: window.location.origin,
-            authUrl: config.url,
-          }),
-        );
-        setLoading(false);
-        return;
-      }
-
-      const supabase = createClient();
-      const callback = new URL("/auth/callback", window.location.origin);
-      if (redirectTo) {
-        callback.searchParams.set("next", safeRedirectPath(redirectTo));
-      }
-
-      const { data, error: authError } = await supabase.auth.signInWithOAuth({
-        provider: "google",
-        options: {
-          redirectTo: callback.toString(),
-          skipBrowserRedirect: true,
-          queryParams: {
-            access_type: "offline",
-            prompt: "consent",
-          },
-        },
-      });
-
-      if (authError) {
-        setError(authError.message);
-        setLoading(false);
-        return;
-      }
-
-      if (!data.url) {
-        setError(t("auth.googleStartFailed"));
-        setLoading(false);
-        return;
-      }
-
-      window.location.assign(data.url);
-    } catch (caught) {
-      setError(failMessage(caught, t("auth.googleStartFailed")));
-      setLoading(false);
-    }
-  };
+  if (!href) {
+    return <Alert>{t("auth.siteUrlMissing")}</Alert>;
+  }
 
   return (
-    <div className="space-y-3">
-      <Button
-        type="button"
-        variant="secondary"
-        className="w-full"
-        onClick={() => void handleGoogleSignIn()}
-        disabled={loading}
-      >
-        <GoogleIcon />
-        {loading ? t("auth.redirecting") : t("auth.continueGoogle")}
-      </Button>
-      {error ? <Alert>{error}</Alert> : null}
-    </div>
+    <a href={href} className={buttonClasses("secondary", "md", "w-full")}>
+      <GoogleIcon />
+      {t("auth.continueGoogle")}
+    </a>
   );
 }

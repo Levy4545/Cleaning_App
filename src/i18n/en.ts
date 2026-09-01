@@ -138,6 +138,8 @@ export const en = {
     googleNotEnabledLocal:
       "This app is using local Auth ({authUrl}), not your hosted Supabase project. Google credentials pasted in the cloud dashboard do not apply here. Point SUPABASE_URL at https://xxxx.supabase.co in .env.local to use that Google setup, or enable [auth.external.google] in supabase/config.toml and add http://127.0.0.1:54321/auth/v1/callback in Google Cloud, then restart supabase start.",
     googleStartFailed: "Couldn't start Google sign-in. Check SUPABASE_URL and that this domain is listed in Supabase redirect URLs.",
+    siteUrlMissing:
+      "Set NEXT_PUBLIC_SITE_URL to the live site (https://your-app.vercel.app). Google sign-in always finishes on that site, not localhost.",
   },
   dashboard: {
     title: "Dashboard",
