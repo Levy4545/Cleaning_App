@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 
 import { getCurrentUser, syncUserFromAuth } from "@/actions/auth";
 import { homePathForRole } from "@/lib/auth/home-path";
-import { isLocalOrigin, resolvePublicSiteUrl } from "@/lib/auth/public-site";
+import { resolvePublicSiteUrl } from "@/lib/auth/public-site";
 import { createClient } from "@/lib/supabase/server";
 
 function loginRedirect(site: string, error: string, description?: string | null) {
@@ -19,22 +19,25 @@ function loginRedirect(site: string, error: string, description?: string | null)
  */
 export async function GET(request: Request) {
   const requestUrl = new URL(request.url);
-  const site = resolvePublicSiteUrl() ?? requestUrl.origin;
+  const site = resolvePublicSiteUrl();
+  const here = requestUrl.origin;
 
-  if (isLocalOrigin(requestUrl.origin) && resolvePublicSiteUrl()) {
-    return NextResponse.redirect(`${resolvePublicSiteUrl()}/login`);
+  if (site && here !== site) {
+    return NextResponse.redirect(`${site}/login`);
   }
+
+  const destination = site ?? here;
 
   const code = requestUrl.searchParams.get("code");
   const oauthError = requestUrl.searchParams.get("error");
   const oauthDescription = requestUrl.searchParams.get("error_description");
 
   if (oauthError && !code) {
-    return loginRedirect(site, oauthError, oauthDescription);
+    return loginRedirect(destination, oauthError, oauthDescription);
   }
 
   if (!code) {
-    return loginRedirect(site, "auth");
+    return loginRedirect(destination, "auth");
   }
 
   try {
@@ -42,7 +45,7 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
       console.error("OAuth code exchange failed:", error.message);
-      return loginRedirect(site, "auth", error.message);
+      return loginRedirect(destination, "auth", error.message);
     }
 
     try {
@@ -53,10 +56,10 @@ export async function GET(request: Request) {
 
     const current = await getCurrentUser().catch(() => null);
     const home = homePathForRole(current?.role ?? "USER");
-    return NextResponse.redirect(`${site}${home}`);
+    return NextResponse.redirect(`${destination}${home}`);
   } catch (caught) {
     console.error("OAuth callback failed:", caught);
     const message = caught instanceof Error ? caught.message : undefined;
-    return loginRedirect(site, "auth", message);
+    return loginRedirect(destination, "auth", message);
   }
 }

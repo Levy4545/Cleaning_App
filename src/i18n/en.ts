@@ -130,14 +130,7 @@ export const en = {
     newPasswordPlaceholder: "At least 8 characters",
     namePlaceholder: "Jane Doe",
     continueGoogle: "Continue with Google",
-    redirecting: "Redirecting...",
     authFailed: "Authentication failed. Please try again.",
-    authNotConfigured: "Sign-in isn't configured. Add SUPABASE_URL and SUPABASE_ANON_KEY on Vercel, then redeploy.",
-    googleNotEnabled:
-      "Google sign-in isn't enabled. In Supabase go to Authentication → Sign In / Providers → Google, add your Google Cloud client ID and secret, and under URL Configuration add {origin}/auth/callback.",
-    googleNotEnabledLocal:
-      "This app is using local Auth ({authUrl}), not your hosted Supabase project. Google credentials pasted in the cloud dashboard do not apply here. Point SUPABASE_URL at https://xxxx.supabase.co in .env.local to use that Google setup, or enable [auth.external.google] in supabase/config.toml and add http://127.0.0.1:54321/auth/v1/callback in Google Cloud, then restart supabase start.",
-    googleStartFailed: "Couldn't start Google sign-in. Check SUPABASE_URL and that this domain is listed in Supabase redirect URLs.",
     siteUrlMissing:
       "Set NEXT_PUBLIC_SITE_URL to the live site (https://your-app.vercel.app). Google sign-in always finishes on that site, not localhost.",
   },

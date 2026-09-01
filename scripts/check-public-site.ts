@@ -47,6 +47,14 @@ assert(
 assert(isLocalOrigin("http://localhost:3000"), "localhost origin");
 assert(!isLocalOrigin("https://app.example.com"), "prod origin");
 
+assert(
+  googleOAuthStartUrl({
+    NEXT_PUBLIC_SITE_URL: "http://localhost:3000",
+    VERCEL_PROJECT_PRODUCTION_URL: "cleaning-app-liart.vercel.app",
+  }) === "https://cleaning-app-liart.vercel.app/auth/google",
+  "ignores localhost SITE_URL and uses the Vercel production host",
+);
+
 const env: NodeJS.Dict<string | undefined> = { VERCEL_PROJECT_PRODUCTION_URL: "shop.example.com" };
 assert(applyPublicSiteUrl(env) === "https://shop.example.com", "apply copies origin");
 assert(env.NEXT_PUBLIC_SITE_URL === "https://shop.example.com", "sets NEXT_PUBLIC_SITE_URL");

@@ -3,6 +3,7 @@
 import { buttonClasses } from "@/components/ui/button";
 import { Alert } from "@/components/ui/alert";
 import { useI18n } from "@/i18n/provider";
+import { googleOAuthStartUrl } from "@/lib/auth/public-site";
 
 function GoogleIcon() {
   return (
@@ -33,8 +34,7 @@ function GoogleIcon() {
  */
 export function GoogleSignInButton() {
   const { t } = useI18n();
-  const site = process.env.NEXT_PUBLIC_SITE_URL?.replace(/\/$/, "") ?? "";
-  const href = site ? `${site}/auth/google` : "";
+  const href = googleOAuthStartUrl() ?? "";
 
   if (!href) {
     return <Alert>{t("auth.siteUrlMissing")}</Alert>;
