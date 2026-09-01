@@ -24,6 +24,9 @@ const playfair = Playfair_Display({
 export const metadata: Metadata = {
   title: "Master-Gold Cleaning",
   description: "Book premium car, carpet, couch, and chair cleaning in minutes.",
+  icons: {
+    icon: [{ url: "/favicon.svg", type: "image/svg+xml" }],
+  },
 };
 
 export default async function RootLayout({
@@ -44,7 +47,7 @@ export default async function RootLayout({
         <I18nProvider initialLocale={locale} catalog={catalog}>
           {children}
         </I18nProvider>
-        <SpeedInsights />
+        {process.env.NODE_ENV === "production" ? <SpeedInsights /> : null}
       </body>
     </html>
   );

@@ -1,5 +1,6 @@
 import {
   applySupabasePublicEnv,
+  isLocalSupabaseUrl,
   readPublicSupabaseConfig,
   readSupabaseAnonKey,
   readSupabaseUrl,
@@ -61,5 +62,9 @@ const applied = applySupabasePublicEnv(env);
 assert(applied.url === "https://from-secret.supabase.co", "apply returns url");
 assert(env.NEXT_PUBLIC_SUPABASE_URL === "https://from-secret.supabase.co", "copies URL onto NEXT_PUBLIC_");
 assert(env.NEXT_PUBLIC_SUPABASE_ANON_KEY === "anon-from-secret", "copies anon key onto NEXT_PUBLIC_");
+
+assert(isLocalSupabaseUrl("http://127.0.0.1:54321"), "local 127.0.0.1");
+assert(isLocalSupabaseUrl("http://localhost:54321"), "local localhost");
+assert(!isLocalSupabaseUrl("https://abcd.supabase.co"), "hosted is not local");
 
 console.log("supabase env alias checks passed");

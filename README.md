@@ -160,13 +160,10 @@ Optional: `GMAIL_USER` + `GMAIL_APP_PASSWORD` (or `RESEND_API_KEY` + `NOTIFICATI
 
 Also:
 
-1. **Google login** — in the production Supabase project:
-   - Authentication → Sign In / Providers → **Google**: enable it and paste the Google Cloud **Web application** client ID and secret.
-   - Google Cloud authorized redirect URI must be exactly `https://<project-ref>.supabase.co/auth/v1/callback` (shown on that Supabase screen).
-   - Authentication → URL Configuration:
-     - Site URL: `https://your-app.vercel.app`
-     - Redirect URLs: `https://your-app.vercel.app/auth/callback` and `https://your-app.vercel.app/**`
-   - If the button stays on “Redirecting…” and never leaves the page, Google is not enabled or this domain is missing from Redirect URLs. Email/password login still works.
+1. **Google login**
+   - **Production (Vercel):** in the hosted Supabase project, Authentication → Sign In / Providers → **Google**: enable it and paste the Google Cloud **Web application** client ID and secret. Google Cloud authorized redirect URI must be `https://<project-ref>.supabase.co/auth/v1/callback`. Also add Authorized JavaScript origins: your Vercel domain and `https://<project-ref>.supabase.co`. URL Configuration: Site URL = `https://your-app.vercel.app`, Redirect URLs include `https://your-app.vercel.app/auth/callback` and `https://your-app.vercel.app/**`.
+   - **Local `next dev`:** `.env.local` usually points at `http://127.0.0.1:54321`. That is **not** your hosted project. Google settings in the cloud dashboard are ignored. Either set `SUPABASE_URL` / `SUPABASE_ANON_KEY` to the hosted project, or enable Google in `supabase/config.toml`, add `http://127.0.0.1:54321/auth/v1/callback` in Google Cloud, then `supabase stop && supabase start`.
+   - Email/password login still works either way.
 2. After the first login, promote an admin if you did not set `ADMIN_BOOTSTRAP_EMAIL`: `npm run db:promote-admin -- you@example.com` with production `DATABASE_URL`.
 3. Never run `db:wipe --yes` against production without `--allow-remote` and a conscious decision.
 4. If logs say `password authentication failed for user "postgres"`, `DATABASE_URL` still has the wrong database password (or the local `postgres:postgres` default).

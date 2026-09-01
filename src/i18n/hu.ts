@@ -140,6 +140,8 @@ export const hu: Messages = {
       "A bejelentkezés nincs beállítva. Adja hozzá a SUPABASE_URL és SUPABASE_ANON_KEY értékeket a Vercelen, majd telepítse újra.",
     googleNotEnabled:
       "A Google-bejelentkezés nincs engedélyezve. A Supabase-ben: Authentication → Sign In / Providers → Google, adja meg a Google Cloud kliensazonosítót és titkot, az URL Configuration alatt pedig: {origin}/auth/callback.",
+    googleNotEnabledLocal:
+      "Az alkalmazás helyi Auth-ot használ ({authUrl}), nem a felhős Supabase-projektet. A dashboardba beillesztett Google-adatok ide nem érvényesek. Állítsa a SUPABASE_URL-t https://xxxx.supabase.co-ra a .env.local-ban, vagy engedélyezze a [auth.external.google] részt a supabase/config.toml-ban, adja hozzá a http://127.0.0.1:54321/auth/v1/callback címet a Google Cloudhoz, majd indítsa újra: supabase start.",
     googleStartFailed:
       "A Google-bejelentkezés nem indult el. Ellenőrizze a SUPABASE_URL-t, és hogy a domain szerepel a Supabase átirányítási URL-jei között.",
   },

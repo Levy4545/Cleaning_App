@@ -140,6 +140,8 @@ export const ro: Messages = {
       "Autentificarea nu este configurată. Adaugă SUPABASE_URL și SUPABASE_ANON_KEY pe Vercel, apoi redepune.",
     googleNotEnabled:
       "Autentificarea cu Google nu este activată. În Supabase: Authentication → Sign In / Providers → Google, adaugă client ID și secret din Google Cloud, iar la URL Configuration pune {origin}/auth/callback.",
+    googleNotEnabledLocal:
+      "Aplicația folosește Auth local ({authUrl}), nu proiectul Supabase găzduit. Datele Google din dashboard-ul cloud nu se aplică aici. Pune SUPABASE_URL pe https://xxxx.supabase.co în .env.local sau activează [auth.external.google] în supabase/config.toml, adaugă http://127.0.0.1:54321/auth/v1/callback în Google Cloud, apoi repornește supabase start.",
     googleStartFailed:
       "Nu am putut porni autentificarea Google. Verifică SUPABASE_URL și că domeniul este în lista de redirect URLs din Supabase.",
   },

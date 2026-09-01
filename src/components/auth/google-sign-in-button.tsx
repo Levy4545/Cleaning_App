@@ -4,6 +4,7 @@ import { useState } from "react";
 
 import { createClient } from "@/lib/supabase/client";
 import { peekBrowserSupabaseConfig } from "@/lib/supabase/browser-config";
+import { isLocalSupabaseUrl } from "@/lib/supabase/env-keys";
 import { readGoogleProviderEnabled } from "@/lib/supabase/provider-settings";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
@@ -70,7 +71,12 @@ export function GoogleSignInButton({ redirectTo }: GoogleSignInButtonProps) {
 
       const googleEnabled = await readGoogleProviderEnabled(config);
       if (googleEnabled === false) {
-        setError(t("auth.googleNotEnabled", { origin: window.location.origin }));
+        setError(
+          t(isLocalSupabaseUrl(config.url) ? "auth.googleNotEnabledLocal" : "auth.googleNotEnabled", {
+            origin: window.location.origin,
+            authUrl: config.url,
+          }),
+        );
         setLoading(false);
         return;
       }
