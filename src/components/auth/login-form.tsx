@@ -24,10 +24,14 @@ export function LoginForm() {
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get("redirectTo");
   const authError = searchParams.get("error");
+  const authErrorDescription = searchParams.get("error_description");
 
-  const [error, setError] = useState<string | null>(
-    authError === "auth" ? t("auth.authFailed") : null,
-  );
+  const [error, setError] = useState<string | null>(() => {
+    if (authErrorDescription) return authErrorDescription;
+    if (authError && authError !== "auth") return authError;
+    if (authError === "auth") return t("auth.authFailed");
+    return null;
+  });
   const [isPending, startTransition] = useTransition();
 
   const handleSubmit = (formData: FormData) => {

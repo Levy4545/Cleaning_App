@@ -5,6 +5,15 @@ import { homePathForRole } from "@/lib/auth/home-path";
 import { safeRedirectPath } from "@/lib/auth/safe-redirect";
 import { createClient } from "@/lib/supabase/server";
 
+function loginErrorRedirect(origin: string, error: string, description?: string | null) {
+  const url = new URL("/login", origin);
+  url.searchParams.set("error", error);
+  if (description) {
+    url.searchParams.set("error_description", description.slice(0, 300));
+  }
+  return NextResponse.redirect(url);
+}
+
 /**
  * Handles an authentication callback and redirects the user to the requested or role-based destination.
  *
@@ -14,10 +23,15 @@ export async function GET(request: Request) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get("code");
   const requestedNext = searchParams.get("next");
-  const login = `${origin}/login?error=auth`;
+  const oauthError = searchParams.get("error");
+  const oauthDescription = searchParams.get("error_description");
+
+  if (oauthError && !code) {
+    return loginErrorRedirect(origin, oauthError, oauthDescription);
+  }
 
   if (!code) {
-    return NextResponse.redirect(login);
+    return loginErrorRedirect(origin, "auth");
   }
 
   try {
@@ -25,7 +39,7 @@ export async function GET(request: Request) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
     if (error) {
       console.error("OAuth code exchange failed:", error.message);
-      return NextResponse.redirect(login);
+      return loginErrorRedirect(origin, "auth", error.message);
     }
 
     try {
@@ -40,6 +54,7 @@ export async function GET(request: Request) {
     return NextResponse.redirect(`${origin}${next}`);
   } catch (caught) {
     console.error("OAuth callback failed:", caught);
-    return NextResponse.redirect(login);
+    const message = caught instanceof Error ? caught.message : undefined;
+    return loginErrorRedirect(origin, "auth", message);
   }
 }
