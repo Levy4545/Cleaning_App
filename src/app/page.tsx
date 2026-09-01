@@ -1,6 +1,9 @@
+import { unstable_cache } from "next/cache";
+
 import { getDefaultShopId } from "@/lib/tenancy/get-shop";
 import { listActiveServices } from "@/db/queries/services";
 import { HomeView, type HomeServiceCard } from "@/components/home/home-view";
+import { WithCatalog } from "@/i18n/with-catalog";
 
 const fallbackServices: HomeServiceCard[] = [
   {
@@ -39,8 +42,8 @@ const fallbackServices: HomeServiceCard[] = [
 
 export const revalidate = 3600;
 
-async function loadServices(): Promise<HomeServiceCard[]> {
-  try {
+const loadCachedServices = unstable_cache(
+  async (): Promise<HomeServiceCard[]> => {
     const shopId = await getDefaultShopId();
     const services = await listActiveServices(shopId);
     if (services.length === 0) {
@@ -55,6 +58,14 @@ async function loadServices(): Promise<HomeServiceCard[]> {
       durationMinutes: service.durationMinutes,
       requiresTimeWindow: service.requiresTimeWindow,
     }));
+  },
+  ["home-services"],
+  { revalidate: 3600, tags: ["catalog"] },
+);
+
+async function loadServices(): Promise<HomeServiceCard[]> {
+  try {
+    return await loadCachedServices();
   } catch {
     return fallbackServices;
   }
@@ -62,5 +73,9 @@ async function loadServices(): Promise<HomeServiceCard[]> {
 
 export default async function HomePage() {
   const services = await loadServices();
-  return <HomeView services={services} />;
+  return (
+    <WithCatalog>
+      <HomeView services={services} />
+    </WithCatalog>
+  );
 }

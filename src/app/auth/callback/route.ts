@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
-import { getCurrentUser, syncUserFromAuth } from "@/actions/auth";
+import { syncUserFromAuth } from "@/actions/auth";
+import { getCurrentUser } from "@/lib/auth/current-user";
 import { homePathForRole } from "@/lib/auth/home-path";
 import { resolvePublicSiteUrl } from "@/lib/auth/public-site";
 import { createClient } from "@/lib/supabase/server";

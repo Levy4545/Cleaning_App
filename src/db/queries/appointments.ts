@@ -161,9 +161,13 @@ export async function listCalendarBookings(shopId: string) {
       startsAt: availabilitySlots.startsAt,
       endsAt: availabilitySlots.endsAt,
       slotId: availabilitySlots.id,
+      customerEmail: users.email,
+      serviceName: services.name,
     })
     .from(appointments)
     .innerJoin(availabilitySlots, eq(appointments.slotId, availabilitySlots.id))
+    .leftJoin(users, eq(appointments.customerId, users.id))
+    .leftJoin(services, eq(appointments.serviceId, services.id))
     .where(
       and(
         eq(appointments.shopId, shopId),
@@ -185,6 +189,58 @@ export async function listAppointmentsForCustomer(customerId: string, shopId: st
     .select()
     .from(appointments)
     .where(and(eq(appointments.customerId, customerId), eq(appointments.shopId, shopId)))
+    .orderBy(desc(appointments.createdAt));
+}
+
+/** Customer dashboard + /appointments: appointment + service + slot + review in one round trip. */
+export async function listCustomerAppointmentRows(customerId: string, shopId: string) {
+  return db
+    .select({
+      id: appointments.id,
+      status: appointments.status,
+      deliveryMode: appointments.deliveryMode,
+      createdAt: appointments.createdAt,
+      requestedDate: appointments.requestedDate,
+      statusNote: appointments.statusNote,
+      serviceId: appointments.serviceId,
+      slotId: appointments.slotId,
+      serviceName: services.name,
+      servicePriceMin: services.priceMin,
+      servicePriceMax: services.priceMax,
+      slotStartsAt: availabilitySlots.startsAt,
+      slotEndsAt: availabilitySlots.endsAt,
+      reviewRating: reviews.rating,
+      reviewComment: reviews.comment,
+    })
+    .from(appointments)
+    .leftJoin(services, eq(appointments.serviceId, services.id))
+    .leftJoin(availabilitySlots, eq(appointments.slotId, availabilitySlots.id))
+    .leftJoin(reviews, eq(reviews.appointmentId, appointments.id))
+    .where(and(eq(appointments.customerId, customerId), eq(appointments.shopId, shopId)))
+    .orderBy(desc(appointments.createdAt));
+}
+
+/** Admin overview: appointment + service + customer + slot in one round trip. */
+export async function listAdminOverviewAppointments(shopId: string) {
+  return db
+    .select({
+      id: appointments.id,
+      status: appointments.status,
+      deliveryMode: appointments.deliveryMode,
+      requestedDate: appointments.requestedDate,
+      serviceId: appointments.serviceId,
+      serviceName: services.name,
+      servicePriceMin: services.priceMin,
+      customerName: users.name,
+      customerEmail: users.email,
+      slotStartsAt: availabilitySlots.startsAt,
+      slotEndsAt: availabilitySlots.endsAt,
+    })
+    .from(appointments)
+    .leftJoin(services, eq(appointments.serviceId, services.id))
+    .leftJoin(users, eq(appointments.customerId, users.id))
+    .leftJoin(availabilitySlots, eq(appointments.slotId, availabilitySlots.id))
+    .where(eq(appointments.shopId, shopId))
     .orderBy(desc(appointments.createdAt));
 }
 

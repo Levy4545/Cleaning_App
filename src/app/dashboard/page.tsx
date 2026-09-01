@@ -8,15 +8,14 @@ import { EmptyState } from "@/components/ui/empty-state";
 import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { statusTheme } from "@/components/ui/status-theme";
-import { syncUserFromAuth } from "@/actions/auth";
 import { requireUser } from "@/lib/auth/guards";
 import { getDefaultShopId } from "@/lib/tenancy/get-shop";
-import { findSlotById, listAppointmentsForCustomer } from "@/db/queries/appointments";
-import { findServiceById, listActiveServices } from "@/db/queries/services";
+import { listCustomerAppointmentRows } from "@/db/queries/appointments";
+import { listActiveServices } from "@/db/queries/services";
 import { ServiceIcon } from "@/lib/service-icon";
 import { formatDeliveryMode, formatSlotRange } from "@/lib/format";
 import { localeTag } from "@/i18n/format";
-import { getTranslator } from "@/i18n/server";
+import { getCatalogTranslator } from "@/i18n/server";
 
 const OPEN_STATUSES = ["PENDING", "APPROVED", "ASSIGNED", "IN_PROGRESS"];
 
@@ -27,36 +26,25 @@ const OPEN_STATUSES = ["PENDING", "APPROVED", "ASSIGNED", "IN_PROGRESS"];
  * @returns The customer dashboard view.
  */
 export default async function DashboardPage() {
-  await syncUserFromAuth();
   const user = await requireUser();
   const shopId = await getDefaultShopId();
-  const { t, locale, catalogName } = await getTranslator();
+  const { t, locale, catalogName } = await getCatalogTranslator();
 
   const [appointments, services] = await Promise.all([
-    listAppointmentsForCustomer(user.id, shopId),
+    listCustomerAppointmentRows(user.id, shopId),
     listActiveServices(shopId),
   ]);
 
-  const rows = await Promise.all(
-    appointments.map(async (appointment) => {
-      const [service, slot] = await Promise.all([
-        findServiceById(appointment.serviceId, shopId),
-        findSlotById(appointment.slotId, shopId),
-      ]);
-      return { appointment, service, slot };
-    }),
-  );
-
-  const open = rows.filter((row) => OPEN_STATUSES.includes(row.appointment.status));
-  const completed = rows.filter((row) => row.appointment.status === "COMPLETED");
+  const open = appointments.filter((row) => OPEN_STATUSES.includes(row.status));
+  const completed = appointments.filter((row) => row.status === "COMPLETED");
 
   const next = [...open].sort((a, b) => {
-    const aTime = a.slot ? new Date(a.slot.startsAt).getTime() : Infinity;
-    const bTime = b.slot ? new Date(b.slot.startsAt).getTime() : Infinity;
+    const aTime = a.slotStartsAt ? new Date(a.slotStartsAt).getTime() : Infinity;
+    const bTime = b.slotStartsAt ? new Date(b.slotStartsAt).getTime() : Infinity;
     return aTime - bTime;
   })[0];
 
-  const recent = rows.slice(0, 4);
+  const recent = appointments.slice(0, 4);
 
   return (
     <AppShell
@@ -93,12 +81,12 @@ export default async function DashboardPage() {
 
             {next ? (
               <NextAppointment
-                serviceName={catalogName(next.service?.name ?? t("common.service"), next.service?.id)}
-                deliveryMode={formatDeliveryMode(next.appointment.deliveryMode, t)}
-                status={next.appointment.status}
+                serviceName={catalogName(next.serviceName ?? t("common.service"), next.serviceId)}
+                deliveryMode={formatDeliveryMode(next.deliveryMode, t)}
+                status={next.status}
                 window={
-                  next.slot
-                    ? formatSlotRange(next.slot.startsAt, next.slot.endsAt, locale)
+                  next.slotStartsAt && next.slotEndsAt
+                    ? formatSlotRange(next.slotStartsAt, next.slotEndsAt, locale)
                     : t("dashboard.awaitingWindow")
                 }
               />
@@ -159,23 +147,23 @@ export default async function DashboardPage() {
             <p className="text-sm text-ash">{t("dashboard.noBookings")}</p>
           ) : (
             <ul className="divide-y divide-line">
-              {recent.map(({ appointment, service, slot }) => (
+              {recent.map((row) => (
                 <li
-                  key={appointment.id}
+                  key={row.id}
                   className="flex flex-wrap items-center gap-3 py-3 first:pt-0 last:pb-0"
                 >
                   <span
-                    className={`h-2 w-2 shrink-0 rounded-full ${statusTheme(appointment.status).accent}`}
+                    className={`h-2 w-2 shrink-0 rounded-full ${statusTheme(row.status).accent}`}
                   />
                   <span className="min-w-0 flex-1 truncate text-sm text-bone">
-                    {catalogName(service?.name ?? t("common.service"), service?.id)}
+                    {catalogName(row.serviceName ?? t("common.service"), row.serviceId)}
                   </span>
                   <span className="text-xs text-faint">
-                    {slot
-                      ? formatSlotRange(slot.startsAt, slot.endsAt, locale)
-                      : new Date(appointment.createdAt).toLocaleDateString(localeTag(locale))}
+                    {row.slotStartsAt && row.slotEndsAt
+                      ? formatSlotRange(row.slotStartsAt, row.slotEndsAt, locale)
+                      : new Date(row.createdAt).toLocaleDateString(localeTag(locale))}
                   </span>
-                  <StatusBadge status={appointment.status} />
+                  <StatusBadge status={row.status} />
                 </li>
               ))}
             </ul>

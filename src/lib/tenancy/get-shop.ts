@@ -1,4 +1,6 @@
 import { eq } from "drizzle-orm";
+import { unstable_cache } from "next/cache";
+import { cache } from "react";
 
 import { db } from "@/db";
 import { DEFAULT_SHOP_ID, DEFAULT_SHOP_SLUG, shops, type Shop } from "@/db/schema";
@@ -7,7 +9,7 @@ import { DEFAULT_SHOP_ID, DEFAULT_SHOP_SLUG, shops, type Shop } from "@/db/schem
  * Single-shop MVP: always resolve the default tenant.
  * Marketplace later: replace with host/subdomain resolution (see docs/uml-marketplace).
  */
-export async function getDefaultShop(): Promise<Shop> {
+async function loadDefaultShop(): Promise<Shop> {
   const [shop] = await db
     .select()
     .from(shops)
@@ -55,10 +57,20 @@ export async function getDefaultShop(): Promise<Shop> {
   );
 }
 
-export async function getDefaultShopId(): Promise<string> {
-  const shop = await getDefaultShop();
-  return shop.id;
+export async function getDefaultShop(): Promise<Shop> {
+  return loadDefaultShop();
 }
+
+const loadDefaultShopId = unstable_cache(
+  async () => {
+    const shop = await loadDefaultShop();
+    return shop.id;
+  },
+  ["default-shop-id"],
+  { revalidate: 3600, tags: ["shop"] },
+);
+
+export const getDefaultShopId = cache(async (): Promise<string> => loadDefaultShopId());
 
 /**
  * Resolves a host to the default shop.

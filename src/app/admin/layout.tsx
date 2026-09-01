@@ -1,5 +1,5 @@
 import { requireAdmin } from "@/lib/auth/guards";
-import { syncUserFromAuth } from "@/actions/auth";
+import { WithCatalog } from "@/i18n/with-catalog";
 
 /** Guards the section; each admin page renders its own AppShell with a title. */
 export default async function AdminLayout({
@@ -7,8 +7,7 @@ export default async function AdminLayout({
 }: {
   children: React.ReactNode;
 }) {
-  await syncUserFromAuth();
   await requireAdmin();
 
-  return children;
+  return <WithCatalog>{children}</WithCatalog>;
 }

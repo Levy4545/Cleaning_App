@@ -1,6 +1,6 @@
 "use server";
 
-import { revalidatePath } from "next/cache";
+import { revalidatePath, revalidateTag } from "next/cache";
 
 import { requireAdmin } from "@/lib/auth/guards";
 import { getDefaultShopId } from "@/lib/tenancy/get-shop";
@@ -33,6 +33,7 @@ import {
 import type { ActionResult } from "@/types";
 
 function revalidateCatalogPaths() {
+  revalidateTag("catalog", "max");
   revalidatePath("/admin/services");
   revalidatePath("/book");
   revalidatePath("/dashboard");
