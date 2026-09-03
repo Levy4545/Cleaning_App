@@ -39,6 +39,10 @@ type RealtimeContextValue = {
   items: FeedItem[];
   unreadCount: number;
   connected: boolean;
+  /** True after the first feed fetch completes (may be empty). */
+  feedReady: boolean;
+  /** Increments on each Realtime message signal so open threads can reload. */
+  messageTick: number;
   reload: () => void;
   markOne: (id: string) => void;
   markAll: () => void;
@@ -46,8 +50,9 @@ type RealtimeContextValue = {
 
 const RealtimeContext = createContext<RealtimeContextValue | null>(null);
 
-/** Safety net: reconcile with the server periodically while the tab is visible. */
-const FALLBACK_POLL_MS = 120_000;
+/** Safety net when Realtime is down: reconcile while the tab is visible. */
+const FALLBACK_POLL_MS = 20_000;
+const FALLBACK_POLL_CONNECTED_MS = 60_000;
 const REFRESH_DEBOUNCE_MS = 400;
 const TOAST_TTL_MS = 6_000;
 
@@ -62,11 +67,14 @@ export function RealtimeProvider({
   const [items, setItems] = useState<FeedItem[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const [connected, setConnected] = useState(false);
+  const [feedReady, setFeedReady] = useState(false);
+  const [messageTick, setMessageTick] = useState(0);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
 
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const seenIds = useRef<Set<string>>(new Set());
   const seeded = useRef(false);
+  const connectedRef = useRef(false);
 
   const scheduleRefresh = useCallback(() => {
     if (refreshTimer.current) clearTimeout(refreshTimer.current);
@@ -96,7 +104,10 @@ export function RealtimeProvider({
   const reload = useCallback(
     (options?: { toast?: boolean }) => {
       void getNotificationFeed().then((result) => {
-        if (!result.success || !result.data) return;
+        if (!result.success || !result.data) {
+          setFeedReady(true);
+          return;
+        }
         const { items: nextItems, unreadCount: nextUnread } = result.data;
 
         if (options?.toast && seeded.current) {
@@ -116,6 +127,7 @@ export function RealtimeProvider({
         setUnreadCount(nextUnread);
         for (const item of nextItems) seenIds.current.add(item.id);
         seeded.current = true;
+        setFeedReady(true);
       });
     },
     [pushToast],
@@ -148,7 +160,8 @@ export function RealtimeProvider({
     reload();
   }, [reload]);
 
-  // Realtime subscription (RLS scopes rows to this user).
+  // Realtime subscription (RLS scopes rows to this user). Re-subscribe when
+  // auth settles so the first attempt never stays on an unauthenticated socket.
   useEffect(() => {
     if (!userId) return;
 
@@ -156,25 +169,41 @@ export function RealtimeProvider({
     let unsubscribe = () => {};
     let cancelled = false;
 
-    void authorizeRealtime(client).then(() => {
+    const start = async () => {
+      const ok = await authorizeRealtime(client);
       if (cancelled) return;
+      unsubscribe();
+      if (!ok) {
+        setConnected(false);
+        connectedRef.current = false;
+        return;
+      }
       unsubscribe = subscribeToUserEvents(client, userId, {
         onNotification: () => {
-          // Re-fetch authoritative feed; toast any newly-seen unread item.
           reload({ toast: true });
           scheduleRefresh();
         },
         onAppointmentChange: () => {
           scheduleRefresh();
         },
+        onMessage: () => {
+          setMessageTick((tick) => tick + 1);
+          // New messages also create in-app notifications — refresh feed + RSC.
+          reload({ toast: true });
+          scheduleRefresh();
+        },
         onStatusChange: (status) => {
-          setConnected(status === "SUBSCRIBED");
+          const next = status === "SUBSCRIBED";
+          connectedRef.current = next;
+          setConnected(next);
         },
       });
-    });
+    };
+
+    void start();
 
     const { data: authSub } = client.auth.onAuthStateChange(() => {
-      void authorizeRealtime(client);
+      void start();
     });
 
     return () => {
@@ -188,11 +217,14 @@ export function RealtimeProvider({
   useEffect(() => {
     let timer: ReturnType<typeof setInterval> | null = null;
 
+    const intervalMs = () =>
+      connectedRef.current ? FALLBACK_POLL_CONNECTED_MS : FALLBACK_POLL_MS;
+
     const start = () => {
-      if (timer) return;
+      if (timer) clearInterval(timer);
       timer = setInterval(() => {
         if (document.visibilityState === "visible") reload();
-      }, FALLBACK_POLL_MS);
+      }, intervalMs());
     };
     const stop = () => {
       if (timer) clearInterval(timer);
@@ -215,11 +247,20 @@ export function RealtimeProvider({
       stop();
       document.removeEventListener("visibilitychange", onVisibility);
     };
-  }, [reload]);
+  }, [reload, connected]);
 
   const value = useMemo(
-    () => ({ items, unreadCount, connected, reload, markOne, markAll }),
-    [items, unreadCount, connected, reload, markOne, markAll],
+    () => ({
+      items,
+      unreadCount,
+      connected,
+      feedReady,
+      messageTick,
+      reload,
+      markOne,
+      markAll,
+    }),
+    [items, unreadCount, connected, feedReady, messageTick, reload, markOne, markAll],
   );
 
   return (
