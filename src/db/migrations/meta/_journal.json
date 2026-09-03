@@ -64,6 +64,13 @@
       "when": 1788034000000,
       "tag": "0008_available_days",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1788465011554,
+      "tag": "0009_perf_indexes",
+      "breakpoints": true
     }
   ]
 }

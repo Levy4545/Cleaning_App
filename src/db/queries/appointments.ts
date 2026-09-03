@@ -193,7 +193,11 @@ export async function listAppointmentsForCustomer(customerId: string, shopId: st
 }
 
 /** Customer dashboard + /appointments: appointment + service + slot + review in one round trip. */
-export async function listCustomerAppointmentRows(customerId: string, shopId: string) {
+export async function listCustomerAppointmentRows(
+  customerId: string,
+  shopId: string,
+  limit = 100,
+) {
   return db
     .select({
       id: appointments.id,
@@ -217,7 +221,8 @@ export async function listCustomerAppointmentRows(customerId: string, shopId: st
     .leftJoin(availabilitySlots, eq(appointments.slotId, availabilitySlots.id))
     .leftJoin(reviews, eq(reviews.appointmentId, appointments.id))
     .where(and(eq(appointments.customerId, customerId), eq(appointments.shopId, shopId)))
-    .orderBy(desc(appointments.createdAt));
+    .orderBy(desc(appointments.createdAt))
+    .limit(limit);
 }
 
 /** Admin overview: appointment + service + customer + slot in one round trip. */
@@ -272,7 +277,7 @@ export async function listAppointmentsForShop(
  * @param shopId - The shop whose appointments to retrieve
  * @returns Appointment records ordered from newest to oldest, each including its associated items
  */
-export async function listShopAppointmentsInbox(shopId: string) {
+export async function listShopAppointmentsInbox(shopId: string, limit = 200) {
   const rows = await db
     .select({
       id: appointments.id,
@@ -308,7 +313,8 @@ export async function listShopAppointmentsInbox(shopId: string) {
     .leftJoin(addresses, eq(appointments.addressId, addresses.id))
     .leftJoin(reviews, eq(reviews.appointmentId, appointments.id))
     .where(eq(appointments.shopId, shopId))
-    .orderBy(desc(appointments.createdAt));
+    .orderBy(desc(appointments.createdAt))
+    .limit(limit);
 
   const ids = rows.map((row) => row.id);
   const items =
