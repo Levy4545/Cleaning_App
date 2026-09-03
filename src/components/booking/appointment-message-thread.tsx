@@ -1,9 +1,10 @@
 "use client";
 
-import { useCallback, useEffect, useState, useTransition } from "react";
+import { useCallback, useEffect, useRef, useState, useTransition } from "react";
 import { Send } from "lucide-react";
 
 import { listAppointmentMessages, sendAppointmentMessage } from "@/actions/messages";
+import { useRealtimeNotifications } from "@/components/realtime/realtime-provider";
 import { Alert } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
@@ -20,12 +21,18 @@ type MessageRow = {
   isMine: boolean;
 };
 
+/** While a thread is open, poll as a safety net if Realtime drops. */
+const THREAD_FALLBACK_MS = 8_000;
+
 export function AppointmentMessageThread({ appointmentId }: { appointmentId: string }) {
   const { t, locale } = useI18n();
+  const { messageTick, connected } = useRealtimeNotifications();
   const [messages, setMessages] = useState<MessageRow[]>([]);
   const [draft, setDraft] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [isPending, startTransition] = useTransition();
+  const bottomRef = useRef<HTMLLIElement | null>(null);
+  const prevTick = useRef(messageTick);
 
   const load = useCallback(() => {
     startTransition(async () => {
@@ -39,6 +46,26 @@ export function AppointmentMessageThread({ appointmentId }: { appointmentId: str
   useEffect(() => {
     load();
   }, [load]);
+
+  // Live reload when Realtime signals a messages INSERT/UPDATE.
+  useEffect(() => {
+    if (messageTick === prevTick.current) return;
+    prevTick.current = messageTick;
+    load();
+  }, [messageTick, load]);
+
+  // Short fallback poll while this thread is mounted (faster when disconnected).
+  useEffect(() => {
+    const ms = connected ? THREAD_FALLBACK_MS * 2 : THREAD_FALLBACK_MS;
+    const timer = setInterval(() => {
+      if (document.visibilityState === "visible") load();
+    }, ms);
+    return () => clearInterval(timer);
+  }, [load, connected]);
+
+  useEffect(() => {
+    bottomRef.current?.scrollIntoView({ block: "nearest" });
+  }, [messages.length]);
 
   const onSend = () => {
     const body = draft.trim();
@@ -65,9 +92,10 @@ export function AppointmentMessageThread({ appointmentId }: { appointmentId: str
         {messages.length === 0 ? (
           <li className="text-sm text-faint">{t("messages.empty")}</li>
         ) : (
-          messages.map((message) => (
+          messages.map((message, index) => (
             <li
               key={message.id}
+              ref={index === messages.length - 1 ? bottomRef : null}
               className={cn(
                 "rounded-lg px-3 py-2 text-sm",
                 message.isMine

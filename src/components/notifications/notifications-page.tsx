@@ -1,10 +1,9 @@
 "use client";
 
 import Link from "next/link";
-import { useTransition } from "react";
 import { Bell } from "lucide-react";
 
-import { markAllAsRead, markNotificationAsRead } from "@/actions/notifications";
+import { useRealtimeNotifications } from "@/components/realtime/realtime-provider";
 import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { localeTag } from "@/i18n/format";
@@ -21,15 +20,22 @@ export type NotificationListItem = {
   createdAt: string;
 };
 
+/**
+ * Live notifications inbox. Prefers the RealtimeProvider feed; falls back to
+ * server-rendered props until the first client fetch completes.
+ */
 export function NotificationsPageClient({
-  items,
-  unreadCount,
+  items: initialItems,
+  unreadCount: initialUnread,
 }: {
   items: NotificationListItem[];
   unreadCount: number;
 }) {
   const { t, locale } = useI18n();
-  const [isPending, startTransition] = useTransition();
+  const live = useRealtimeNotifications();
+
+  const items = live.feedReady ? live.items : initialItems;
+  const unreadCount = live.feedReady ? live.unreadCount : initialUnread;
 
   if (items.length === 0) {
     return (
@@ -52,12 +58,8 @@ export function NotificationsPageClient({
         <Button
           variant="ghost"
           size="sm"
-          disabled={isPending || unreadCount === 0}
-          onClick={() =>
-            startTransition(async () => {
-              await markAllAsRead();
-            })
-          }
+          disabled={unreadCount === 0}
+          onClick={() => live.markAll()}
         >
           {t("notifications.markAll")}
         </Button>
@@ -88,11 +90,9 @@ export function NotificationsPageClient({
               {item.href ? (
                 <Link
                   href={item.href}
-                  onClick={() =>
-                    startTransition(async () => {
-                      if (unread) await markNotificationAsRead(item.id);
-                    })
-                  }
+                  onClick={() => {
+                    if (unread) live.markOne(item.id);
+                  }}
                   className="block px-5 py-4 transition-colors hover:bg-elevated"
                 >
                   {inner}
@@ -101,11 +101,9 @@ export function NotificationsPageClient({
                 <button
                   type="button"
                   className="block w-full px-5 py-4 text-left transition-colors hover:bg-elevated"
-                  onClick={() =>
-                    startTransition(async () => {
-                      if (unread) await markNotificationAsRead(item.id);
-                    })
-                  }
+                  onClick={() => {
+                    if (unread) live.markOne(item.id);
+                  }}
                 >
                   {inner}
                 </button>

@@ -6,6 +6,7 @@ import { Logo } from "@/components/layout/logo";
 import { MobileNav } from "@/components/layout/mobile-nav";
 import { ShellHeading } from "@/components/layout/shell-heading";
 import { NotificationBell } from "@/components/notifications/notification-bell";
+import { RealtimeProvider } from "@/components/realtime/realtime-provider";
 import type { MessageKey, TranslateVars } from "@/i18n/dictionary";
 
 export function AppShell({
@@ -37,7 +38,7 @@ export function AppShell({
     descriptionVars,
   };
 
-  return (
+  const shell = (
     <div className="min-h-screen bg-ink">
       <AppSidebar variant={variant} user={user} />
       <MobileNav variant={variant} />
@@ -67,4 +68,7 @@ export function AppShell({
       </div>
     </div>
   );
+
+  // Signed-in shells get live notifications + toasts; the bell reads this context.
+  return user?.id ? <RealtimeProvider userId={user.id}>{shell}</RealtimeProvider> : shell;
 }

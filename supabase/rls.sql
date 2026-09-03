@@ -72,6 +72,16 @@ CREATE POLICY "appointments_select_own"
   ON appointments FOR SELECT
   USING (auth.uid() = customer_id OR auth.uid() = cleaner_id);
 
+-- Admins receive Realtime appointment updates for the whole shop inbox.
+CREATE POLICY "appointments_select_admin"
+  ON appointments FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM users u
+      WHERE u.id = auth.uid() AND u.role = 'ADMIN'
+    )
+  );
+
 CREATE POLICY "appointments_insert_own"
   ON appointments FOR INSERT
   WITH CHECK (auth.uid() = customer_id);
@@ -114,6 +124,16 @@ CREATE POLICY "notifications_select_own"
 CREATE POLICY "messages_select_participant"
   ON messages FOR SELECT
   USING (auth.uid() = sender_id OR auth.uid() = recipient_id);
+
+-- Admins can receive Realtime for any booking thread (not only as recipient).
+CREATE POLICY "messages_select_admin"
+  ON messages FOR SELECT
+  USING (
+    EXISTS (
+      SELECT 1 FROM users u
+      WHERE u.id = auth.uid() AND u.role = 'ADMIN'
+    )
+  );
 
 CREATE POLICY "messages_insert_as_sender"
   ON messages FOR INSERT

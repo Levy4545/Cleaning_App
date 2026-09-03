@@ -1,6 +1,7 @@
 import {
   boolean,
   date,
+  index,
   integer,
   jsonb,
   numeric,
@@ -116,18 +117,25 @@ export const users = pgTable("users", {
  * Marketplace scaffold: unused by UI for now.
  * Future: per-shop roles instead of global users.role alone.
  */
-export const shopMembers = pgTable("shop_members", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  shopId: uuid("shop_id")
-    .notNull()
-    .references(() => shops.id, { onDelete: "cascade" }),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  role: shopRoleEnum("role").notNull().default("CUSTOMER"),
-  status: memberStatusEnum("status").notNull().default("ACTIVE"),
-  joinedAt: timestamp("joined_at", { withTimezone: true }).defaultNow().notNull(),
-});
+export const shopMembers = pgTable(
+  "shop_members",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    role: shopRoleEnum("role").notNull().default("CUSTOMER"),
+    status: memberStatusEnum("status").notNull().default("ACTIVE"),
+    joinedAt: timestamp("joined_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("shop_members_user_idx").on(table.userId),
+    index("shop_members_shop_idx").on(table.shopId),
+  ],
+);
 
 export const profiles = pgTable("profiles", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -140,57 +148,69 @@ export const profiles = pgTable("profiles", {
   preferredLanguage: text("preferred_language").default("en"),
 });
 
-export const addresses = pgTable("addresses", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  shopId: uuid("shop_id")
-    .notNull()
-    .references(() => shops.id, { onDelete: "cascade" }),
-  label: text("label"),
-  line1: text("line1").notNull(),
-  city: text("city").notNull(),
-  postalCode: text("postal_code"),
-  isDefault: boolean("is_default").notNull().default(false),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
+export const addresses = pgTable(
+  "addresses",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "cascade" }),
+    label: text("label"),
+    line1: text("line1").notNull(),
+    city: text("city").notNull(),
+    postalCode: text("postal_code"),
+    isDefault: boolean("is_default").notNull().default(false),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("addresses_user_idx").on(table.userId)],
+);
 
-export const serviceCategories = pgTable("service_categories", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  shopId: uuid("shop_id")
-    .notNull()
-    .references(() => shops.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  slug: text("slug").notNull(),
-});
+export const serviceCategories = pgTable(
+  "service_categories",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    slug: text("slug").notNull(),
+  },
+  (table) => [index("service_categories_shop_idx").on(table.shopId)],
+);
 
-export const services = pgTable("services", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  shopId: uuid("shop_id")
-    .notNull()
-    .references(() => shops.id, { onDelete: "cascade" }),
-  categoryId: uuid("category_id")
-    .notNull()
-    .references(() => serviceCategories.id, { onDelete: "cascade" }),
-  name: text("name").notNull(),
-  description: text("description"),
-  /** Supported modes for this service, e.g. ["ON_SITE","DROP_OFF"]. */
-  deliveryModes: text("delivery_modes").array().notNull().default(["DROP_OFF"]),
-  /**
-   * Selectable item-type options for booking (e.g. ["leather","fabric"]).
-   * Empty means the booking wizard hides the item-type field.
-   */
-  itemTypeOptions: text("item_type_options").array().notNull().default([]),
-  durationMinutes: integer("duration_minutes").notNull().default(60),
-  /** When false, customers can request the service without picking a slot. */
-  requiresTimeWindow: boolean("requires_time_window").notNull().default(true),
-  /** Inclusive price range — quotes are not fixed single amounts. */
-  priceMin: numeric("price_min", { precision: 10, scale: 2 }).notNull().default("0"),
-  priceMax: numeric("price_max", { precision: 10, scale: 2 }).notNull().default("0"),
-  isActive: boolean("is_active").notNull().default(true),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
+export const services = pgTable(
+  "services",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "cascade" }),
+    categoryId: uuid("category_id")
+      .notNull()
+      .references(() => serviceCategories.id, { onDelete: "cascade" }),
+    name: text("name").notNull(),
+    description: text("description"),
+    /** Supported modes for this service, e.g. ["ON_SITE","DROP_OFF"]. */
+    deliveryModes: text("delivery_modes").array().notNull().default(["DROP_OFF"]),
+    /**
+     * Selectable item-type options for booking (e.g. ["leather","fabric"]).
+     * Empty means the booking wizard hides the item-type field.
+     */
+    itemTypeOptions: text("item_type_options").array().notNull().default([]),
+    durationMinutes: integer("duration_minutes").notNull().default(60),
+    /** When false, customers can request the service without picking a slot. */
+    requiresTimeWindow: boolean("requires_time_window").notNull().default(true),
+    /** Inclusive price range — quotes are not fixed single amounts. */
+    priceMin: numeric("price_min", { precision: 10, scale: 2 }).notNull().default("0"),
+    priceMax: numeric("price_max", { precision: 10, scale: 2 }).notNull().default("0"),
+    isActive: boolean("is_active").notNull().default(true),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("services_shop_active_idx").on(table.shopId, table.isActive)],
+);
 
 /** Romanian and Hungarian copy for a service. English stays on `services`. */
 export const serviceTranslations = pgTable(
@@ -222,55 +242,75 @@ export const availableDays = pgTable(
   (table) => [unique("available_days_shop_day_unique").on(table.shopId, table.day)],
 );
 
-export const availabilitySlots = pgTable("availability_slots", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  shopId: uuid("shop_id")
-    .notNull()
-    .references(() => shops.id, { onDelete: "cascade" }),
-  startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
-  endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
-  deliveryMode: deliveryModeEnum("delivery_mode").notNull(),
-  capacity: integer("capacity").notNull().default(1),
-  bookedCount: integer("booked_count").notNull().default(0),
-  status: slotStatusEnum("status").notNull().default("OPEN"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
+export const availabilitySlots = pgTable(
+  "availability_slots",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "cascade" }),
+    startsAt: timestamp("starts_at", { withTimezone: true }).notNull(),
+    endsAt: timestamp("ends_at", { withTimezone: true }).notNull(),
+    deliveryMode: deliveryModeEnum("delivery_mode").notNull(),
+    capacity: integer("capacity").notNull().default(1),
+    bookedCount: integer("booked_count").notNull().default(0),
+    status: slotStatusEnum("status").notNull().default("OPEN"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("availability_slots_shop_starts_idx").on(table.shopId, table.startsAt)],
+);
 
-export const appointments = pgTable("appointments", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  shopId: uuid("shop_id")
-    .notNull()
-    .references(() => shops.id, { onDelete: "cascade" }),
-  customerId: uuid("customer_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  serviceId: uuid("service_id")
-    .notNull()
-    .references(() => services.id, { onDelete: "restrict" }),
-  slotId: uuid("slot_id").references(() => availabilitySlots.id, { onDelete: "restrict" }),
-  /** Set when the service does not require a time window — customer picks a free day. */
-  requestedDate: date("requested_date", { mode: "string" }),
-  cleanerId: uuid("cleaner_id").references(() => users.id, { onDelete: "set null" }),
-  addressId: uuid("address_id").references(() => addresses.id, { onDelete: "set null" }),
-  status: appointmentStatusEnum("status").notNull().default("PENDING"),
-  deliveryMode: deliveryModeEnum("delivery_mode").notNull(),
-  notes: text("notes"),
-  /** Admin/cleaner message to the client (e.g. rejection reason). */
-  statusNote: text("status_note"),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
+export const appointments = pgTable(
+  "appointments",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "cascade" }),
+    customerId: uuid("customer_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    serviceId: uuid("service_id")
+      .notNull()
+      .references(() => services.id, { onDelete: "restrict" }),
+    slotId: uuid("slot_id").references(() => availabilitySlots.id, { onDelete: "restrict" }),
+    /** Set when the service does not require a time window — customer picks a free day. */
+    requestedDate: date("requested_date", { mode: "string" }),
+    cleanerId: uuid("cleaner_id").references(() => users.id, { onDelete: "set null" }),
+    addressId: uuid("address_id").references(() => addresses.id, { onDelete: "set null" }),
+    status: appointmentStatusEnum("status").notNull().default("PENDING"),
+    deliveryMode: deliveryModeEnum("delivery_mode").notNull(),
+    notes: text("notes"),
+    /** Admin/cleaner message to the client (e.g. rejection reason). */
+    statusNote: text("status_note"),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("appointments_shop_status_created_idx").on(
+      table.shopId,
+      table.status,
+      table.createdAt,
+    ),
+    index("appointments_customer_idx").on(table.customerId, table.createdAt),
+    index("appointments_slot_idx").on(table.slotId),
+  ],
+);
 
-export const appointmentItems = pgTable("appointment_items", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  appointmentId: uuid("appointment_id")
-    .notNull()
-    .references(() => appointments.id, { onDelete: "cascade" }),
-  /** Selected option from the service's itemTypeOptions, or null when none apply. */
-  itemType: text("item_type"),
-  quantity: integer("quantity").notNull().default(1),
-  details: jsonb("details").$type<Record<string, unknown>>().notNull().default({}),
-});
+export const appointmentItems = pgTable(
+  "appointment_items",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    appointmentId: uuid("appointment_id")
+      .notNull()
+      .references(() => appointments.id, { onDelete: "cascade" }),
+    /** Selected option from the service's itemTypeOptions, or null when none apply. */
+    itemType: text("item_type"),
+    quantity: integer("quantity").notNull().default(1),
+    details: jsonb("details").$type<Record<string, unknown>>().notNull().default({}),
+  },
+  (table) => [index("appointment_items_appointment_idx").on(table.appointmentId)],
+);
 
 export const payments = pgTable("payments", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -288,61 +328,84 @@ export const payments = pgTable("payments", {
   createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
 });
 
-export const jobLogs = pgTable("job_logs", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  shopId: uuid("shop_id")
-    .notNull()
-    .references(() => shops.id, { onDelete: "cascade" }),
-  appointmentId: uuid("appointment_id")
-    .notNull()
-    .references(() => appointments.id, { onDelete: "cascade" }),
-  actorId: uuid("actor_id").references(() => users.id, { onDelete: "set null" }),
-  action: text("action").notNull(),
-  note: text("note"),
-  at: timestamp("at", { withTimezone: true }).defaultNow().notNull(),
-});
+export const jobLogs = pgTable(
+  "job_logs",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "cascade" }),
+    appointmentId: uuid("appointment_id")
+      .notNull()
+      .references(() => appointments.id, { onDelete: "cascade" }),
+    actorId: uuid("actor_id").references(() => users.id, { onDelete: "set null" }),
+    action: text("action").notNull(),
+    note: text("note"),
+    at: timestamp("at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [index("job_logs_appointment_idx").on(table.appointmentId)],
+);
 
-export const messages = pgTable("messages", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  shopId: uuid("shop_id")
-    .notNull()
-    .references(() => shops.id, { onDelete: "cascade" }),
-  senderId: uuid("sender_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  recipientId: uuid("recipient_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  appointmentId: uuid("appointment_id").references(() => appointments.id, {
-    onDelete: "set null",
-  }),
-  body: text("body").notNull(),
-  sentAt: timestamp("sent_at", { withTimezone: true }).defaultNow().notNull(),
-  readAt: timestamp("read_at", { withTimezone: true }),
-});
+export const messages = pgTable(
+  "messages",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "cascade" }),
+    senderId: uuid("sender_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    recipientId: uuid("recipient_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    appointmentId: uuid("appointment_id").references(() => appointments.id, {
+      onDelete: "set null",
+    }),
+    body: text("body").notNull(),
+    sentAt: timestamp("sent_at", { withTimezone: true }).defaultNow().notNull(),
+    readAt: timestamp("read_at", { withTimezone: true }),
+  },
+  (table) => [
+    index("messages_recipient_idx").on(table.recipientId, table.sentAt),
+    index("messages_appointment_idx").on(table.appointmentId),
+  ],
+);
 
-export const notifications = pgTable("notifications", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  shopId: uuid("shop_id")
-    .notNull()
-    .references(() => shops.id, { onDelete: "cascade" }),
-  userId: uuid("user_id")
-    .notNull()
-    .references(() => users.id, { onDelete: "cascade" }),
-  appointmentId: uuid("appointment_id").references(() => appointments.id, {
-    onDelete: "set null",
-  }),
-  /** Stable event key, e.g. BOOKING_APPROVED / APPOINTMENT_MESSAGE */
-  type: text("type").notNull().default("GENERAL"),
-  channel: notificationChannelEnum("channel").notNull(),
-  subject: text("subject"),
-  body: text("body").notNull(),
-  /** Deep link inside the app (e.g. /appointments or /admin/appointments) */
-  href: text("href"),
-  status: notificationStatusEnum("status").notNull().default("PENDING"),
-  readAt: timestamp("read_at", { withTimezone: true }),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-});
+export const notifications = pgTable(
+  "notifications",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+    shopId: uuid("shop_id")
+      .notNull()
+      .references(() => shops.id, { onDelete: "cascade" }),
+    userId: uuid("user_id")
+      .notNull()
+      .references(() => users.id, { onDelete: "cascade" }),
+    appointmentId: uuid("appointment_id").references(() => appointments.id, {
+      onDelete: "set null",
+    }),
+    /** Stable event key, e.g. BOOKING_APPROVED / APPOINTMENT_MESSAGE */
+    type: text("type").notNull().default("GENERAL"),
+    channel: notificationChannelEnum("channel").notNull(),
+    subject: text("subject"),
+    body: text("body").notNull(),
+    /** Deep link inside the app (e.g. /appointments or /admin/appointments) */
+    href: text("href"),
+    status: notificationStatusEnum("status").notNull().default("PENDING"),
+    readAt: timestamp("read_at", { withTimezone: true }),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  (table) => [
+    index("notifications_user_feed_idx").on(
+      table.userId,
+      table.shopId,
+      table.channel,
+      table.createdAt,
+    ),
+    index("notifications_appointment_idx").on(table.appointmentId),
+  ],
+);
 
 /** MVP: customer review after COMPLETED. */
 export const reviews = pgTable("reviews", {

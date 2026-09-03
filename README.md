@@ -172,6 +172,15 @@ Also:
 3. Never run `db:wipe --yes` against production without `--allow-remote` and a conscious decision.
 4. If logs say `password authentication failed for user "postgres"`, `DATABASE_URL` still has the wrong database password (or the local `postgres:postgres` default).
 
+### Real-time updates (one-time Supabase setup)
+
+Live notifications, toasts, and auto-refreshing lists use **Supabase Realtime**. Because Realtime reads the database WAL, it also sees writes made through Drizzle over `DATABASE_URL` — but only when the app data lives in the **same** Supabase project (the production single-project setup). Enable it once per project:
+
+1. Apply `supabase/rls.sql` (scopes each user to their own rows).
+2. Apply `supabase/realtime.sql` (adds `notifications`, `appointments`, and `messages` to the `supabase_realtime` publication and sets replica identity). Re-run this if you previously applied an older version that omitted `messages`.
+
+The browser subscribes with the signed-in user's JWT, so RLS scopes delivery (customers see their own rows; admins see shop-wide appointments/messages). If Realtime is disabled, the UI falls back to a visibility-aware poll, and open message threads poll more often. Local dev's two-database split (Docker Postgres for data, Supabase only for Auth) means Realtime cannot see app writes locally unless you point `DATABASE_URL` at the local Supabase Postgres (port 54322).
+
 ## License
 
 MIT
