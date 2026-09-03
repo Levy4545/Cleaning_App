@@ -2,29 +2,6 @@ import type { RealtimeChannel, SupabaseClient } from "@supabase/supabase-js";
 
 import { createClient } from "@/lib/supabase/client";
 
-/**
- * Row shapes as they arrive over Postgres change events (snake_case columns).
- * Only the fields the UI needs are typed.
- */
-export type RealtimeNotificationRow = {
-  id: string;
-  user_id: string;
-  type: string;
-  channel: string;
-  subject: string | null;
-  body: string;
-  href: string | null;
-  read_at: string | null;
-  created_at: string;
-  appointment_id: string | null;
-};
-
-export type RealtimeAppointmentRow = {
-  id: string;
-  customer_id: string;
-  status: string;
-};
-
 let browserClient: SupabaseClient | null = null;
 
 /** Single browser Supabase client reused across subscriptions (one socket per tab). */
@@ -36,27 +13,31 @@ export function getRealtimeClient(): SupabaseClient {
 }
 
 /**
- * Keep the Realtime socket authenticated so RLS lets the user receive their own rows.
- * Safe to call repeatedly (on mount and on auth-state changes).
+ * Keep the Realtime socket authenticated so RLS lets the user receive their own
+ * rows. Safe to call repeatedly (on mount and on auth-state changes).
  */
 export async function authorizeRealtime(client: SupabaseClient): Promise<void> {
   const {
     data: { session },
   } = await client.auth.getSession();
   if (session?.access_token) {
-    client.realtime.setAuth(session.access_token);
+    await client.realtime.setAuth(session.access_token);
   }
 }
 
 type UserEventHandlers = {
-  onNotificationInsert?: (row: RealtimeNotificationRow) => void;
-  onAppointmentUpdate?: (row: RealtimeAppointmentRow) => void;
+  onNotification?: () => void;
+  onAppointmentChange?: () => void;
   onStatusChange?: (status: string) => void;
 };
 
 /**
- * Subscribe a signed-in user to their own in-app notifications and appointment
- * status changes. RLS scopes delivery to rows the user may read. Returns an
+ * Subscribe a signed-in user to their own notifications + appointment changes.
+ *
+ * Rows are scoped by RLS to the authenticated user (see supabase/rls.sql), so we
+ * intentionally do NOT use server-side column filters — they are brittle and the
+ * change payload columns are not guaranteed. Each event is treated as a "your
+ * data changed" signal; the caller re-fetches authoritative data. Returns an
  * unsubscribe function.
  */
 export function subscribeToUserEvents(
@@ -65,30 +46,21 @@ export function subscribeToUserEvents(
   handlers: UserEventHandlers,
 ): () => void {
   const channel: RealtimeChannel = client
-    .channel(`user-events:${userId}`)
+    .channel(`user-events-${userId}`)
     .on(
       "postgres_changes",
-      {
-        event: "INSERT",
-        schema: "public",
-        table: "notifications",
-        filter: `user_id=eq.${userId}`,
-      },
-      (payload) => {
-        handlers.onNotificationInsert?.(payload.new as RealtimeNotificationRow);
-      },
+      { event: "INSERT", schema: "public", table: "notifications" },
+      () => handlers.onNotification?.(),
     )
     .on(
       "postgres_changes",
-      {
-        event: "UPDATE",
-        schema: "public",
-        table: "appointments",
-        filter: `customer_id=eq.${userId}`,
-      },
-      (payload) => {
-        handlers.onAppointmentUpdate?.(payload.new as RealtimeAppointmentRow);
-      },
+      { event: "UPDATE", schema: "public", table: "appointments" },
+      () => handlers.onAppointmentChange?.(),
+    )
+    .on(
+      "postgres_changes",
+      { event: "INSERT", schema: "public", table: "appointments" },
+      () => handlers.onAppointmentChange?.(),
     )
     .subscribe((status) => {
       handlers.onStatusChange?.(status);

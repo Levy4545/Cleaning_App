@@ -66,16 +66,7 @@ export function RealtimeProvider({
 
   const refreshTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const seenIds = useRef<Set<string>>(new Set());
-
-  const reload = useCallback(() => {
-    void getNotificationFeed().then((result) => {
-      if (result.success && result.data) {
-        setItems(result.data.items);
-        setUnreadCount(result.data.unreadCount);
-        for (const item of result.data.items) seenIds.current.add(item.id);
-      }
-    });
-  }, []);
+  const seeded = useRef(false);
 
   const scheduleRefresh = useCallback(() => {
     if (refreshTimer.current) clearTimeout(refreshTimer.current);
@@ -94,6 +85,40 @@ export function RealtimeProvider({
       setTimeout(() => dismissToast(toast.id), TOAST_TTL_MS);
     },
     [dismissToast],
+  );
+
+  /**
+   * Fetch authoritative feed from the server. On the first load we only seed
+   * (no toast); afterwards, any newly-seen unread items raise a toast. Realtime
+   * change payloads are treated as signals only — the server data is the source
+   * of truth (the local Realtime payload columns are not guaranteed).
+   */
+  const reload = useCallback(
+    (options?: { toast?: boolean }) => {
+      void getNotificationFeed().then((result) => {
+        if (!result.success || !result.data) return;
+        const { items: nextItems, unreadCount: nextUnread } = result.data;
+
+        if (options?.toast && seeded.current) {
+          const fresh = nextItems.filter((item) => !seenIds.current.has(item.id) && !item.readAt);
+          if (fresh.length > 0) {
+            const newest = fresh[0];
+            pushToast({
+              id: newest.id,
+              title: newest.subject ?? "Update",
+              body: newest.body,
+              href: newest.href,
+            });
+          }
+        }
+
+        setItems(nextItems);
+        setUnreadCount(nextUnread);
+        for (const item of nextItems) seenIds.current.add(item.id);
+        seeded.current = true;
+      });
+    },
+    [pushToast],
   );
 
   const markOne = useCallback((id: string) => {
@@ -118,7 +143,7 @@ export function RealtimeProvider({
     void markAllAsRead();
   }, []);
 
-  // Seed once on mount.
+  // Seed once on mount (no toast for existing notifications).
   useEffect(() => {
     reload();
   }, [reload]);
@@ -134,35 +159,12 @@ export function RealtimeProvider({
     void authorizeRealtime(client).then(() => {
       if (cancelled) return;
       unsubscribe = subscribeToUserEvents(client, userId, {
-        onNotificationInsert: (row) => {
-          if (seenIds.current.has(row.id)) return;
-          seenIds.current.add(row.id);
-
-          if (row.channel === "IN_APP") {
-            const item: FeedItem = {
-              id: row.id,
-              type: row.type,
-              subject: row.subject,
-              body: row.body,
-              href: row.href,
-              readAt: row.read_at,
-              createdAt: row.created_at,
-              appointmentId: row.appointment_id,
-            };
-            setItems((current) => [item, ...current].slice(0, 40));
-            if (!row.read_at) setUnreadCount((count) => count + 1);
-            pushToast({
-              id: row.id,
-              title: row.subject ?? "Update",
-              body: row.body,
-              href: row.href,
-            });
-          }
-
-          // New data (e.g. a booking for admins) — pull authoritative render.
+        onNotification: () => {
+          // Re-fetch authoritative feed; toast any newly-seen unread item.
+          reload({ toast: true });
           scheduleRefresh();
         },
-        onAppointmentUpdate: () => {
+        onAppointmentChange: () => {
           scheduleRefresh();
         },
         onStatusChange: (status) => {
@@ -180,7 +182,7 @@ export function RealtimeProvider({
       unsubscribe();
       authSub.subscription.unsubscribe();
     };
-  }, [userId, pushToast, scheduleRefresh]);
+  }, [userId, reload, scheduleRefresh]);
 
   // Visibility-aware fallback poll in case Realtime is unavailable.
   useEffect(() => {
