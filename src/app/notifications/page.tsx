@@ -1,4 +1,3 @@
-import { syncUserFromAuth } from "@/actions/auth";
 import { requireUser } from "@/lib/auth/guards";
 import { AppShell } from "@/components/layout/app-shell";
 import {
@@ -13,7 +12,6 @@ import {
 import { getTranslator } from "@/i18n/server";
 
 export default async function NotificationsPage() {
-  await syncUserFromAuth();
   const user = await requireUser();
   const shopId = await getDefaultShopId();
   const { t } = await getTranslator();

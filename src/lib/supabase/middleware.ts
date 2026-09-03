@@ -3,6 +3,12 @@ import { type NextRequest, NextResponse } from "next/server";
 
 import { readPublicSupabaseConfig } from "./env-keys";
 
+function hasAuthCookie(request: NextRequest) {
+  return request.cookies
+    .getAll()
+    .some((cookie) => cookie.name.startsWith("sb-") && cookie.name.includes("auth-token"));
+}
+
 /**
  * Synchronizes the Supabase session and redirects requests based on authentication state and pathname.
  *
@@ -13,6 +19,25 @@ export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
   });
+
+  const { pathname } = request.nextUrl;
+  const isProtectedRoute =
+    pathname.startsWith("/dashboard") ||
+    pathname.startsWith("/settings") ||
+    pathname.startsWith("/admin") ||
+    pathname.startsWith("/book") ||
+    pathname.startsWith("/appointments") ||
+    pathname.startsWith("/notifications");
+
+  if (!hasAuthCookie(request)) {
+    if (isProtectedRoute) {
+      const url = request.nextUrl.clone();
+      url.pathname = "/login";
+      url.searchParams.set("redirectTo", pathname);
+      return NextResponse.redirect(url);
+    }
+    return supabaseResponse;
+  }
 
   const config = readPublicSupabaseConfig();
   if (!config) {
@@ -42,15 +67,6 @@ export async function updateSession(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
-
-  const { pathname } = request.nextUrl;
-  const isProtectedRoute =
-    pathname.startsWith("/dashboard") ||
-    pathname.startsWith("/settings") ||
-    pathname.startsWith("/admin") ||
-    pathname.startsWith("/book") ||
-    pathname.startsWith("/appointments") ||
-    pathname.startsWith("/notifications");
 
   if (!user && isProtectedRoute) {
     const url = request.nextUrl.clone();

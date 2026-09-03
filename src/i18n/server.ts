@@ -1,4 +1,5 @@
 import { cookies, headers } from "next/headers";
+import { unstable_cache } from "next/cache";
 import { cache } from "react";
 
 import { listServiceTranslationsForShop } from "@/db/queries/services";
@@ -19,11 +20,19 @@ import {
   type Locale,
 } from "./locales";
 
-export const getCatalogTranslationMap = cache(async (): Promise<CatalogTranslationMap> => {
-  try {
+const loadCatalogTranslationMap = unstable_cache(
+  async () => {
     const shopId = await getDefaultShopId();
     const rows = await listServiceTranslationsForShop(shopId);
     return buildCatalogTranslationMap(rows);
+  },
+  ["catalog-translations"],
+  { revalidate: 3600, tags: ["catalog"] },
+);
+
+export const getCatalogTranslationMap = cache(async (): Promise<CatalogTranslationMap> => {
+  try {
+    return await loadCatalogTranslationMap();
   } catch {
     return emptyCatalogTranslationMap();
   }
@@ -57,7 +66,13 @@ export async function getRequestLocale(): Promise<Locale> {
   return localeFromAcceptLanguage(headerStore.get("accept-language")) ?? DEFAULT_LOCALE;
 }
 
+/** Dictionary only — no catalog DB. Use `getCatalogTranslator` when rendering service names. */
 export async function getTranslator() {
+  const locale = await getRequestLocale();
+  return withCatalog(locale, emptyCatalogTranslationMap());
+}
+
+export async function getCatalogTranslator() {
   const locale = await getRequestLocale();
   const catalog = await getCatalogTranslationMap();
   return withCatalog(locale, catalog);

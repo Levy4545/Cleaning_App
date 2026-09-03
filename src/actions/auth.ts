@@ -14,7 +14,8 @@ import {
 } from "@/db/queries/users";
 import { ensureProfile } from "@/db/queries/profiles";
 import { ensureShopMembership } from "@/db/queries/shop-members";
-import type { ActionResult, AuthUser } from "@/types";
+import { getCurrentUser } from "@/lib/auth/current-user";
+import type { ActionResult } from "@/types";
 import {
   loginSchema,
   registerSchema,
@@ -158,42 +159,6 @@ export async function updateProfile(input: {
 
   revalidatePath("/settings");
   return { success: true };
-}
-
-/**
- * Retrieves the authenticated user with database-backed profile and role details.
- *
- * @returns The current user, or `null` when no user is authenticated.
- */
-export async function getCurrentUser(): Promise<AuthUser | null> {
-  const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) {
-    return null;
-  }
-
-  try {
-    const record = await findUserById(user.id);
-
-    return {
-      id: user.id,
-      email: user.email ?? record?.email ?? "",
-      name: record?.name ?? (user.user_metadata?.name as string | undefined) ?? null,
-      phone: record?.phone ?? null,
-      role: record?.role ?? "USER",
-    };
-  } catch {
-    return {
-      id: user.id,
-      email: user.email ?? "",
-      name: (user.user_metadata?.name as string | undefined) ?? null,
-      phone: null,
-      role: "USER",
-    };
-  }
 }
 
 /**

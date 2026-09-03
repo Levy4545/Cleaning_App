@@ -10,25 +10,19 @@ import { StatCard } from "@/components/ui/stat-card";
 import { StatusBadge } from "@/components/ui/status-badge";
 import { requireAdmin } from "@/lib/auth/guards";
 import { getDefaultShopId } from "@/lib/tenancy/get-shop";
-import {
-  findSlotById,
-  listAppointmentsForShop,
-  listSlotsForShop,
-} from "@/db/queries/appointments";
-import { findServiceById } from "@/db/queries/services";
-import { findUserById } from "@/db/queries/users";
+import { listAdminOverviewAppointments, listSlotsForShop } from "@/db/queries/appointments";
 import { AvailableDaysManager } from "@/components/admin/available-days";
 import { formatDay, formatLongDate, formatMoney, formatSlotRange } from "@/lib/format";
 import { listAvailableDays } from "@/db/queries/available-days";
-import { getTranslator } from "@/i18n/server";
+import { getCatalogTranslator } from "@/i18n/server";
 
 export default async function AdminHomePage() {
   const admin = await requireAdmin();
   const shopId = await getDefaultShopId();
-  const { t, locale, catalogName } = await getTranslator();
+  const { t, locale, catalogName } = await getCatalogTranslator();
 
   const [appointments, slots, freeDays] = await Promise.all([
-    listAppointmentsForShop(shopId),
+    listAdminOverviewAppointments(shopId),
     listSlotsForShop(shopId),
     listAvailableDays(shopId),
   ]);
@@ -38,37 +32,21 @@ export default async function AdminHomePage() {
   const completed = appointments.filter((a) => a.status === "COMPLETED");
   const openSlots = slots.filter((s) => s.status === "OPEN").length;
 
-  const attention = await Promise.all(
-    [...pending, ...approved].slice(0, 5).map(async (appointment) => {
-      const [service, customer, slot] = await Promise.all([
-        findServiceById(appointment.serviceId, shopId),
-        findUserById(appointment.customerId),
-        findSlotById(appointment.slotId, shopId),
-      ]);
+  const attention = [...pending, ...approved].slice(0, 5).map((appointment) => ({
+    id: appointment.id,
+    status: appointment.status,
+    serviceName: catalogName(appointment.serviceName ?? t("common.service"), appointment.serviceId),
+    customerName: appointment.customerName ?? null,
+    customerEmail: appointment.customerEmail ?? t("common.customer"),
+    window:
+      appointment.slotStartsAt && appointment.slotEndsAt
+        ? formatSlotRange(appointment.slotStartsAt, appointment.slotEndsAt, locale)
+        : appointment.requestedDate
+          ? formatDay(`${appointment.requestedDate}T12:00:00`, locale)
+          : t("admin.noWindow"),
+  }));
 
-      return {
-        id: appointment.id,
-        status: appointment.status,
-        serviceName: catalogName(service?.name ?? t("common.service"), service?.id),
-        customerName: customer?.name ?? null,
-        customerEmail: customer?.email ?? t("common.customer"),
-        window: slot
-          ? formatSlotRange(slot.startsAt, slot.endsAt, locale)
-          : appointment.requestedDate
-            ? formatDay(`${appointment.requestedDate}T12:00:00`, locale)
-            : t("admin.noWindow"),
-      };
-    }),
-  );
-
-  // Quote ranges — revenue uses the lower bound until cash PAID tracking lands.
-  const completedPrices = await Promise.all(
-    completed.map(async (appointment) => {
-      const service = await findServiceById(appointment.serviceId, shopId);
-      return Number(service?.priceMin ?? 0);
-    }),
-  );
-  const revenue = completedPrices.reduce((sum, price) => sum + price, 0);
+  const revenue = completed.reduce((sum, appointment) => sum + Number(appointment.servicePriceMin ?? 0), 0);
 
   return (
     <AppShell

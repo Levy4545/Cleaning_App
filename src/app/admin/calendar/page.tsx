@@ -3,8 +3,6 @@ import { WeekCalendar } from "@/components/admin/week-calendar";
 import { requireAdmin } from "@/lib/auth/guards";
 import { getDefaultShopId } from "@/lib/tenancy/get-shop";
 import { listCalendarBookings, listSlotsForShop } from "@/db/queries/appointments";
-import { findServiceById } from "@/db/queries/services";
-import { findUserById } from "@/db/queries/users";
 import { getTranslator } from "@/i18n/server";
 
 export default async function AdminCalendarPage() {
@@ -17,25 +15,16 @@ export default async function AdminCalendarPage() {
     listCalendarBookings(shopId),
   ]);
 
-  const calendarBookings = await Promise.all(
-    bookingRows.map(async (row) => {
-      const [customer, service] = await Promise.all([
-        findUserById(row.customerId),
-        findServiceById(row.serviceId, shopId),
-      ]);
-
-      return {
-        id: row.appointmentId,
-        slotId: row.slotId,
-        status: row.status,
-        startsAt: row.startsAt.toISOString(),
-        endsAt: row.endsAt.toISOString(),
-        customerEmail: customer?.email ?? t("common.customer"),
-        serviceName: service?.name ?? t("common.service"),
-        deliveryMode: row.deliveryMode,
-      };
-    }),
-  );
+  const calendarBookings = bookingRows.map((row) => ({
+    id: row.appointmentId,
+    slotId: row.slotId,
+    status: row.status,
+    startsAt: row.startsAt.toISOString(),
+    endsAt: row.endsAt.toISOString(),
+    customerEmail: row.customerEmail ?? t("common.customer"),
+    serviceName: row.serviceName ?? t("common.service"),
+    deliveryMode: row.deliveryMode,
+  }));
 
   return (
     <AppShell

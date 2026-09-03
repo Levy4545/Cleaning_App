@@ -150,6 +150,8 @@ If you already created `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_K
 
 `POSTGRES_URL` is accepted as an alias of `DATABASE_URL`. Passwords with `@`, `#`, or `%` are encoded automatically.
 
+Serverless functions run in **Frankfurt (`fra1`)** so they sit next to a typical EU Supabase project. If your database is in another region, change `preferredRegion` in `src/app/layout.tsx` and `regions` in `vercel.json`.
+
 Optional: `GMAIL_USER` + `GMAIL_APP_PASSWORD` (or `RESEND_API_KEY` + `NOTIFICATION_EMAIL_FROM`) for booking emails. `ADMIN_BOOTSTRAP_EMAIL` promotes that user to admin on first login — leave unset after you have a real admin.
 
 `SUPABASE_SERVICE_ROLE_KEY` is optional (the app does not use it today).

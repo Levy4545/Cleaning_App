@@ -1,6 +1,5 @@
 import { KeyRound, ShieldCheck, UserRound } from "lucide-react";
 
-import { syncUserFromAuth } from "@/actions/auth";
 import { requireUser } from "@/lib/auth/guards";
 import { AppShell } from "@/components/layout/app-shell";
 import { ResetPasswordForm } from "@/components/auth/reset-password-form";
@@ -9,7 +8,6 @@ import { Card, CardDescription, CardHeader, CardTitle } from "@/components/ui/ca
 import { getTranslator } from "@/i18n/server";
 
 export default async function SettingsPage() {
-  await syncUserFromAuth();
   const user = await requireUser();
   const { t } = await getTranslator();
 
