@@ -1,27 +1,13 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState, useTransition } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Bell, CheckCheck } from "lucide-react";
 
-import {
-  getNotificationFeed,
-  markAllAsRead,
-  markNotificationAsRead,
-} from "@/actions/notifications";
+import { useRealtimeNotifications } from "@/components/realtime/realtime-provider";
 import { useI18n } from "@/i18n/provider";
 import type { Translator } from "@/i18n/dictionary";
 import { cn } from "@/lib/utils";
-
-type FeedItem = {
-  id: string;
-  type: string;
-  subject: string | null;
-  body: string;
-  href: string | null;
-  readAt: string | null;
-  createdAt: string;
-};
 
 function relativeTime(iso: string, t: Translator["t"]) {
   const diffMs = Date.now() - new Date(iso).getTime();
@@ -36,27 +22,9 @@ function relativeTime(iso: string, t: Translator["t"]) {
 
 export function NotificationBell() {
   const { t } = useI18n();
+  const { items, unreadCount, markOne, markAll } = useRealtimeNotifications();
   const [open, setOpen] = useState(false);
-  const [items, setItems] = useState<FeedItem[]>([]);
-  const [unreadCount, setUnreadCount] = useState(0);
-  const [isPending, startTransition] = useTransition();
   const panelRef = useRef<HTMLDivElement>(null);
-
-  const refresh = () => {
-    startTransition(async () => {
-      const result = await getNotificationFeed();
-      if (result.success && result.data) {
-        setItems(result.data.items);
-        setUnreadCount(result.data.unreadCount);
-      }
-    });
-  };
-
-  useEffect(() => {
-    refresh();
-    const id = window.setInterval(refresh, 45_000);
-    return () => window.clearInterval(id);
-  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -69,33 +37,11 @@ export function NotificationBell() {
     return () => document.removeEventListener("mousedown", onPointer);
   }, [open]);
 
-  const onOpen = () => {
-    setOpen((value) => !value);
-    refresh();
-  };
-
-  const onMarkAll = () => {
-    startTransition(async () => {
-      await markAllAsRead();
-      refresh();
-    });
-  };
-
-  const onClickItem = (item: FeedItem) => {
-    startTransition(async () => {
-      if (!item.readAt) {
-        await markNotificationAsRead(item.id);
-      }
-      refresh();
-    });
-    setOpen(false);
-  };
-
   return (
     <div className="relative" ref={panelRef}>
       <button
         type="button"
-        onClick={onOpen}
+        onClick={() => setOpen((value) => !value)}
         aria-label={
           unreadCount > 0
             ? t("notifications.ariaUnread", { n: unreadCount })
@@ -117,8 +63,8 @@ export function NotificationBell() {
             <p className="text-sm font-medium text-bone">{t("notifications.title")}</p>
             <button
               type="button"
-              onClick={onMarkAll}
-              disabled={isPending || unreadCount === 0}
+              onClick={markAll}
+              disabled={unreadCount === 0}
               className="inline-flex items-center gap-1 text-xs text-ash transition-colors hover:text-gold disabled:opacity-40"
             >
               <CheckCheck className="h-3.5 w-3.5" />
@@ -151,7 +97,10 @@ export function NotificationBell() {
                     {item.href ? (
                       <Link
                         href={item.href}
-                        onClick={() => onClickItem(item)}
+                        onClick={() => {
+                          if (unread) markOne(item.id);
+                          setOpen(false);
+                        }}
                         className={cn(
                           "block px-4 py-3 transition-colors hover:bg-elevated",
                           unread && "bg-gold/5",
@@ -162,7 +111,10 @@ export function NotificationBell() {
                     ) : (
                       <button
                         type="button"
-                        onClick={() => onClickItem(item)}
+                        onClick={() => {
+                          if (unread) markOne(item.id);
+                          setOpen(false);
+                        }}
                         className={cn(
                           "block w-full px-4 py-3 text-left transition-colors hover:bg-elevated",
                           unread && "bg-gold/5",
